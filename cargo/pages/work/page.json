@@ -1,0 +1,62 @@
+{
+  "id": "J3916418382",
+  "set_id": "root",
+  "title": "Work",
+  "purl": "work",
+  "page_type": "page",
+  "display": true,
+  "stack": false,
+  "pin": false,
+  "overlay": false,
+  "password_enabled": false,
+  "sort": 3,
+  "index": 3,
+  "page_count": null,
+  "page_design_options": null,
+  "backdrops": {
+    "activeBackdrop": "none"
+  },
+  "pin_options": {},
+  "overlay_options": {},
+  "thumb_media_id": 87197515,
+  "thumbnail": {
+    "id": 87197515,
+    "master_muid": 15269937,
+    "name": "everlast-logo-png_seeklogo-50516.png",
+    "display_name": "everlast-logo-png_seeklogo-50516.png",
+    "hash": "F3137369750165756332805498404913",
+    "width": 600,
+    "height": 600,
+    "file_size": 11803,
+    "file_type": "png",
+    "mime_type": "image/png",
+    "is_image": true,
+    "is_video": false,
+    "is_url": false,
+    "is_placeholder": false,
+    "has_audio_track": null,
+    "duration": null,
+    "url": null,
+    "url_id": null,
+    "url_thumb": null,
+    "url_type": null,
+    "created_at": "2026-09-17 11:39:15.530381",
+    "updated_at": "2026-09-17 11:39:15.530381",
+    "options": null
+  },
+  "thumb_meta": {},
+  "tags": [],
+  "access_level": "public",
+  "media": [
+    {
+      "hash": "F3137369750165756332805498404913",
+      "name": "everlast-logo-png_seeklogo-50516.png",
+      "width": 600,
+      "height": 600,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    }
+  ]
+}

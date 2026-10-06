@@ -1,0 +1,236 @@
+<script>/* ____________________________________________________________
+   Contact page (vanilla JS, Cargo.site) — v2
+   Mounts inside the Contact page's own page container (#L4008122332).
+   Builds, stacked:
+     1. Hero com o título centralizado + ScrollReveal (palavra por
+        palavra: opacidade/blur, container desrotacionando) conforme
+        a pessoa rola em direção ao formulário.
+     2. Formulário multietapas (parentWindow.__msfBuildForm).
+     3. Footer.
+   O antigo bloco "GET IN TOUCH / NUMBER / For business inquiries"
+   foi removido.
+   Runs bridged inside an iframe via srcdoc (see the other *-bridged.js
+   loaders on this site for why).
+   ____________________________________________________________ */
+(function () {
+  'use strict';
+
+  var isBridged = (function () { try { return window.parent && window.parent !== window && !!window.parent.document; } catch (e) { return false; } })();
+  var parentWindow = isBridged ? window.parent : window;
+  var document = parentWindow.document;
+
+  var PAGE_ID = 'L4008122332';
+  var CONTACT_EMAIL = 'cttquadrooss@gmail.com';
+  var PHONE_DISPLAY = '(11) 94920-2345';
+  var PHONE_TEL = '+5511949202345';
+
+  /* ---- Texto do título (edite aqui) ---- */
+  var HERO_TITLE = 'Fechado com boas ideias, narrativas autênticas e marcas que somam.';
+  var HERO_SUB = 'Manda o contexto do que você tá pensando, escopo e tempo. A gente alinha o conceito e faz acontecer do jeito certo.';
+
+  /* ---- ScrollReveal (mesmos valores do exemplo do React Bits) ---- */
+  var SR = {
+    baseOpacity: 0,
+    enableBlur: true,
+    baseRotation: 5,
+    blurStrength: 10,
+    stagger: 0.55,   // fração do progresso usada para escalonar as palavras
+    startAt: 0.12    // já começa com as primeiras palavras visíveis ao abrir a página
+  };
+
+  var mounted = false;
+
+  function injectStyles() {
+    if (document.getElementById('contact-page-styles-v2')) return;
+    var styleEl = document.createElement('style');
+    styleEl.id = 'contact-page-styles-v2';
+    styleEl.textContent = "/* Contact page v2 */\n#ct-page-outer {\n  width: 100%;\n  display: flex;\n  flex-direction: column;\n  align-items: stretch;\n}\n\n/* Hero: alto o bastante para a animação acontecer durante a rolagem;\n   o título fica preso (sticky) no centro da tela enquanto revela. */\n#ct-hero {\n  position: relative;\n  width: 100%;\n  height: 210vh;\n  background: #0b0b0b;\n}\n.ct-hero-sticky {\n  position: sticky;\n  top: 0;\n  height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  padding: 0 6%;\n  box-sizing: border-box;\n  overflow: hidden;\n}\n.ct-hero-inner {\n  max-width: 1100px;\n  text-align: center;\n  transform-origin: 0% 50%;\n  will-change: transform;\n}\n.ct-hero-title {\n  margin: 0;\n  color: #fff;\n  font-weight: 600;\n  font-size: clamp(30px, 4.6vw, 68px);\n  line-height: 1.15;\n  letter-spacing: -0.015em;\n}\n.ct-hero-sub {\n  margin: 36px auto 0;\n  max-width: 640px;\n  color: rgba(255,255,255,0.72);\n  font-family: 'SF Mono', 'Roboto Mono', 'Courier New', Consolas, monospace;\n  font-size: clamp(14px, 1.25vw, 17px);\n  line-height: 1.65;\n}\n.ct-hero .sr-word, .ct-hero-inner .sr-word {\n  display: inline-block;\n  will-change: opacity, filter;\n}\n@media (max-width: 760px) {\n  #ct-hero { height: 180vh; }\n  .ct-hero-sub { margin-top: 24px; }\n}\n@media (prefers-reduced-motion: reduce) {\n  #ct-hero { height: auto; }\n  .ct-hero-sticky { position: static; height: auto; min-height: 100vh; }\n}\n\n/* Footer — matches the .ab-foot footer used on other pages */\n.ct-foot {\n  background: #0b0b0b;\n  border-top: 1px solid rgba(255,255,255,.12);\n  padding: 60px;\n  color: #fff;\n  box-sizing: border-box;\n}\n.ct-foot-top {\n  display: flex;\n  justify-content: space-between;\n  align-items: baseline;\n  margin-bottom: 48px;\n  flex-wrap: wrap;\n  gap: 16px;\n}\n.ct-foot-caption {\n  font-size: 13px;\n  letter-spacing: .04em;\n  opacity: .75;\n}\n.ct-foot-social a {\n  color: inherit;\n  text-decoration: none;\n  font-size: 13px;\n  letter-spacing: .04em;\n  margin-left: 24px;\n  opacity: .75;\n  transition: opacity .2s ease;\n}\n.ct-foot-social a:hover { opacity: 1; }\n.ct-foot-links {\n  display: flex;\n  gap: 22px;\n  flex-wrap: wrap;\n  margin-bottom: 44px;\n}\n.ct-foot-links a {\n  color: inherit;\n  text-decoration: none;\n  font-size: 13px;\n  opacity: .7;\n  transition: opacity .2s ease;\n}\n.ct-foot-links a:hover { opacity: 1; }\n.ct-foot-links a.active { opacity: 1; }\n.ct-foot-bottom {\n  display: flex;\n  justify-content: space-between;\n  flex-wrap: wrap;\n  gap: 12px;\n  font-size: 12px;\n  opacity: .5;\n  margin-bottom: 8px;\n}\n.ct-wordmark {\n  font-size: 11vw;\n  line-height: .85;\n  margin: 24px 0 -0.05em;\n  color: #fff;\n  opacity: .92;\n  white-space: nowrap;\n  overflow: hidden;\n  font-weight: 600;\n}\n@media (max-width: 760px) {\n  .ct-foot { padding: 48px 6%; }\n}\n";
+    document.head.appendChild(styleEl);
+  }
+
+  /* ---------------- ScrollReveal ---------------- */
+  function splitInto(el, text, words) {
+    text.split(/(\s+)/).forEach(function (part) {
+      if (/^\s+$/.test(part)) {
+        el.appendChild(document.createTextNode(part));
+      } else if (part.length) {
+        var span = document.createElement('span');
+        span.className = 'sr-word';
+        span.textContent = part;
+        el.appendChild(span);
+        words.push(span);
+      }
+    });
+  }
+
+  function attachScrollReveal(hero, inner, words) {
+    var reduce = parentWindow.matchMedia && parentWindow.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) return;
+
+    function update() {
+      if (!hero.isConnected) return;
+      var rect = hero.getBoundingClientRect();
+      var vh = parentWindow.innerHeight || document.documentElement.clientHeight;
+      var travel = Math.max(1, rect.height - vh);
+      var raw = -rect.top / travel;
+      if (raw < 0) raw = 0;
+      if (raw > 1) raw = 1;
+      var p = SR.startAt + (1 - SR.startAt) * raw;
+
+      inner.style.transform = 'rotate(' + (SR.baseRotation * (1 - p)).toFixed(3) + 'deg)';
+
+      var n = words.length;
+      for (var i = 0; i < n; i++) {
+        var start = n > 1 ? (i / (n - 1)) * (1 - SR.stagger) : 0;
+        var wp = (p - start) / SR.stagger;
+        if (wp < 0) wp = 0;
+        if (wp > 1) wp = 1;
+        words[i].style.opacity = String(SR.baseOpacity + (1 - SR.baseOpacity) * wp);
+        if (SR.enableBlur) words[i].style.filter = 'blur(' + (SR.blurStrength * (1 - wp)).toFixed(2) + 'px)';
+      }
+    }
+
+    var ticking = false;
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () { update(); ticking = false; });
+    }
+
+    update();
+    parentWindow.addEventListener('scroll', onScroll, { passive: true });
+    parentWindow.addEventListener('resize', onScroll);
+  }
+
+  function buildHero() {
+    var hero = document.createElement('section');
+    hero.id = 'ct-hero';
+    var sticky = document.createElement('div');
+    sticky.className = 'ct-hero-sticky';
+    var inner = document.createElement('div');
+    inner.className = 'ct-hero-inner';
+
+    var words = [];
+    var title = document.createElement('h1');
+    title.className = 'ct-hero-title';
+    splitInto(title, HERO_TITLE, words);
+    var sub = document.createElement('p');
+    sub.className = 'ct-hero-sub';
+    splitInto(sub, HERO_SUB, words);
+
+    inner.appendChild(title);
+    inner.appendChild(sub);
+    sticky.appendChild(inner);
+    hero.appendChild(sticky);
+
+    return { el: hero, inner: inner, words: words };
+  }
+
+  /* ---------------- Footer ---------------- */
+  function buildFooter() {
+    var foot = document.createElement('div');
+    foot.className = 'ct-foot';
+
+    var top = document.createElement('div');
+    top.className = 'ct-foot-top';
+    var cap = document.createElement('span');
+    cap.className = 'ct-foot-caption';
+    cap.textContent = 'Contact';
+    var social = document.createElement('div');
+    social.className = 'ct-foot-social';
+    [
+      { text: 'Instagram', href: 'https://www.instagram.com/quadrooss/' },
+      { text: 'Soundcloud', href: 'https://on.soundcloud.com/FJppKmQt8D0te6Tokn' }
+    ].forEach(function (s) {
+      var a = document.createElement('a');
+      a.href = s.href;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = s.text.toUpperCase();
+      social.appendChild(a);
+    });
+    top.appendChild(cap);
+    top.appendChild(social);
+
+    var links = document.createElement('div');
+    links.className = 'ct-foot-links';
+    [
+      { text: 'Home', href: 'home-page' },
+      { text: 'Work', href: 'work' },
+      { text: 'Archive', href: 'archive' },
+      { text: 'Journal', href: 'journal' },
+      { text: 'About', href: 'about' },
+      { text: 'Contact', href: 'contact' }
+    ].forEach(function (l) {
+      var a = document.createElement('a');
+      a.href = l.href;
+      a.setAttribute('rel', 'history');
+      if (l.text === 'Contact') a.className = 'active';
+      a.textContent = l.text;
+      links.appendChild(a);
+    });
+
+    var bottom = document.createElement('div');
+    bottom.className = 'ct-foot-bottom';
+    var addr = document.createElement('span');
+    addr.textContent = 'Baseado em São Paulo, Brasil. Disponível para projetos no mundo todo.';
+    bottom.appendChild(addr);
+
+    var wordmark = document.createElement('h2');
+    wordmark.className = 'ct-wordmark';
+    wordmark.textContent = '(((quadrooss)))';
+
+    foot.appendChild(top);
+    foot.appendChild(links);
+    foot.appendChild(bottom);
+    foot.appendChild(wordmark);
+    return foot;
+  }
+
+  function buildSection() {
+    var page = document.getElementById(PAGE_ID);
+    if (!page || document.getElementById('ct-page-outer')) return;
+
+    injectStyles();
+
+    /* Cargo's blank-page canvas lays direct children of the page
+       container out as flex row items, so the page container gets
+       exactly ONE child — this outer column — and we stack inside it. */
+    var outer = document.createElement('div');
+    outer.id = 'ct-page-outer';
+
+    var hero = buildHero();
+    outer.appendChild(hero.el);
+
+    var formRoot = parentWindow.__msfBuildForm({
+      destEmail: CONTACT_EMAIL,
+      whatsapp: 'https://wa.me/' + PHONE_TEL.replace('+', ''),
+      whatsappDisplay: PHONE_DISPLAY
+    });
+    formRoot.id = 'ct-msf-wrap';
+    outer.appendChild(formRoot);
+
+    outer.appendChild(buildFooter());
+    page.appendChild(outer);
+
+    attachScrollReveal(hero.el, hero.inner, hero.words);
+    mounted = true;
+  }
+
+  function tryMount(attemptsLeft) {
+    if (mounted) return;
+    var ready = document.getElementById(PAGE_ID) && typeof parentWindow.__msfBuildForm === 'function';
+    if (!ready) {
+      if (attemptsLeft > 0) setTimeout(function () { tryMount(attemptsLeft - 1); }, 400);
+      return;
+    }
+    buildSection();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { tryMount(40); });
+  } else {
+    tryMount(40);
+  }
+})();
+</script>

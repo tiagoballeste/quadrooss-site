@@ -1,0 +1,463 @@
+<script>
+/* ____________________________________________________________
+   Multistep contact form — "virtuallyeverafter.xyz" style wizard
+   (vanilla JS port, Cargo.site). Shared builder exposed on
+   parentWindow.__msfBuildForm so both the Home page and the
+   Contact page can mount the exact same component.
+
+   v2: copy em primeira pessoa, 4 etapas (etapa "tipo de projeto"
+   removida), anexos (PDF / imagem / áudio) na última etapa.
+
+   Envio: FormSubmit (formsubmit.co) — POST multipart com os
+   anexos, direto para o e-mail de contato. Sem backend próprio.
+   Na PRIMEIRA mensagem enviada, o FormSubmit manda um e-mail de
+   ativação para o endereço de destino: é só clicar em "Activate".
+   Limite do FormSubmit: 10 MB somando todos os anexos.
+
+   Runs bridged inside an iframe via srcdoc (see the other
+   *-bridged.js / *-loader blocks on this site for why).
+   ____________________________________________________________ */
+(function () {
+  'use strict';
+
+  var isBridged = (function () { try { return window.parent && window.parent !== window && !!window.parent.document; } catch (e) { return false; } })();
+  var parentWindow = isBridged ? window.parent : window;
+  var document = parentWindow.document;
+
+  var MAX_TOTAL_BYTES = 10 * 1024 * 1024;
+  var ACCEPT = '.pdf,application/pdf,image/*,audio/*';
+
+  var CSS = "/* Multistep contact form — tokens (adjust here to re-theme) */\n:root {\n  --msf-bg: #0a0a0a;\n  --msf-fg: #ffffff;\n  --msf-muted: #8a8a8a;\n  --msf-subtle: #777777;\n  --msf-border: rgba(255,255,255,0.14);\n  --msf-border-strong: rgba(255,255,255,0.3);\n  --msf-font-mono: 'SF Mono', 'Roboto Mono', 'Courier New', Consolas, monospace;\n  --msf-space-sm: 12px;\n  --msf-space-md: 24px;\n  --msf-space-lg: 48px;\n  --msf-space-xl: 96px;\n  --msf-radius: 6px;\n  --msf-error: #ff6b6b;\n}\n\n.msf-wrap {\n  background: var(--msf-bg);\n  color: var(--msf-fg);\n  box-sizing: border-box;\n  padding: var(--msf-space-xl) 5% 80px;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  border-top: 1px solid var(--msf-border);\n}\n.msf-progress-track {\n  width: 100%;\n  max-width: 720px;\n  height: 1px;\n  background: var(--msf-border);\n  margin-bottom: 28px;\n  position: relative;\n}\n.msf-progress-bar {\n  position: absolute;\n  left: 0; top: 0;\n  height: 1px;\n  background: var(--msf-fg);\n  transition: width .5s ease;\n  width: 0%;\n}\n.msf-card { width: 100%; max-width: 720px; min-height: 420px; }\n.msf-eyebrow {\n  font-family: var(--msf-font-mono);\n  font-size: 11px;\n  letter-spacing: .18em;\n  text-transform: uppercase;\n  color: var(--msf-muted);\n  margin-bottom: 28px;\n  display: block;\n}\n.msf-headline {\n  font-size: clamp(28px, 4.4vw, 56px);\n  line-height: 1.05;\n  font-weight: 700;\n  text-transform: uppercase;\n  letter-spacing: -0.01em;\n  margin: 0 0 18px;\n}\n.msf-subhead {\n  font-family: var(--msf-font-mono);\n  font-size: 14px;\n  line-height: 1.6;\n  color: var(--msf-subtle);\n  margin: 0 0 40px;\n  max-width: 520px;\n}\n.msf-field { width: 100%; }\n.msf-input {\n  width: 100%;\n  box-sizing: border-box;\n  background: transparent;\n  border: none;\n  border-bottom: 1px solid var(--msf-border-strong);\n  color: var(--msf-fg);\n  font-size: 22px;\n  font-family: var(--msf-font-mono);\n  padding: 10px 2px 14px;\n  outline: none;\n  transition: border-color .25s ease;\n}\n.msf-input::placeholder { color: var(--msf-muted); }\n.msf-input:focus { border-color: var(--msf-fg); }\n.msf-textarea {\n  width: 100%;\n  box-sizing: border-box;\n  background: transparent;\n  border: 1px solid var(--msf-border-strong);\n  border-radius: var(--msf-radius);\n  color: var(--msf-fg);\n  font-size: 16px;\n  font-family: var(--msf-font-mono);\n  padding: 16px 18px;\n  outline: none;\n  resize: none;\n  min-height: 130px;\n  transition: border-color .25s ease;\n}\n.msf-textarea::placeholder { color: var(--msf-muted); }\n.msf-textarea:focus { border-color: var(--msf-fg); }\n.msf-error {\n  color: var(--msf-error);\n  font-family: var(--msf-font-mono);\n  font-size: 12px;\n  margin-top: 10px;\n  min-height: 16px;\n}\n\n/* Anexos */\n.msf-attach { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; }\n.msf-attach-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }\n.msf-attach-btn {\n  display: inline-flex;\n  align-items: center;\n  gap: 10px;\n  background: transparent;\n  border: 1px dashed var(--msf-border-strong);\n  border-radius: 999px;\n  color: var(--msf-fg);\n  font-family: var(--msf-font-mono);\n  font-size: 12px;\n  letter-spacing: .08em;\n  text-transform: uppercase;\n  padding: 11px 20px;\n  cursor: pointer;\n  transition: border-color .2s ease, background .2s ease;\n}\n.msf-attach-btn:hover { border-color: var(--msf-fg); border-style: solid; }\n.msf-attach-btn svg { width: 15px; height: 15px; }\n.msf-attach-hint { font-family: var(--msf-font-mono); font-size: 11px; color: var(--msf-muted); letter-spacing: .04em; }\n.msf-files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }\n.msf-file {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  border: 1px solid var(--msf-border);\n  border-radius: var(--msf-radius);\n  padding: 10px 14px;\n  font-family: var(--msf-font-mono);\n  font-size: 12px;\n}\n.msf-file-kind { color: var(--msf-muted); text-transform: uppercase; letter-spacing: .1em; font-size: 10px; flex: 0 0 auto; width: 44px; }\n.msf-file-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.msf-file-size { color: var(--msf-muted); flex: 0 0 auto; }\n.msf-file-remove { background: none; border: 0; color: var(--msf-muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; flex: 0 0 auto; }\n.msf-file-remove:hover { color: var(--msf-fg); }\n\n.msf-nav { display: flex; align-items: center; gap: 28px; margin-top: 48px; }\n.msf-back {\n  background: none;\n  border: none;\n  padding: 0;\n  color: var(--msf-subtle);\n  font-family: var(--msf-font-mono);\n  font-size: 13px;\n  letter-spacing: .04em;\n  cursor: pointer;\n  opacity: .7;\n  transition: opacity .2s ease;\n}\n.msf-back:hover { opacity: 1; }\n\n/* Pill button — \"anexo 2\" reference (pill label + sliding-arrow circle) */\n.msf-btn {\n  display: inline-flex;\n  align-items: center;\n  gap: 0;\n  background: none;\n  border: none;\n  padding: 0;\n  cursor: pointer;\n  margin-left: auto;\n}\n.msf-btn[disabled] { cursor: wait; opacity: .6; }\n.msf-btn-label {\n  background: #fff;\n  color: #0a0a0a;\n  border-radius: 999px;\n  padding: 14px 28px;\n  font-family: var(--msf-font-mono);\n  font-size: 13px;\n  letter-spacing: .06em;\n  text-transform: uppercase;\n  transition: background .35s ease, color .35s ease;\n  white-space: nowrap;\n}\n.msf-btn-icon {\n  width: 44px;\n  height: 44px;\n  border-radius: 50%;\n  background: #fff;\n  margin-left: -2px;\n  position: relative;\n  overflow: hidden;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  transition: background .35s ease;\n  flex: 0 0 auto;\n}\n.msf-btn-icon svg {\n  position: absolute;\n  width: 18px;\n  height: 18px;\n  color: #0a0a0a;\n  transition: transform .4s cubic-bezier(.65,0,.35,1);\n}\n.msf-btn-icon svg.msf-arrow-1 { transform: translate(0,0); }\n.msf-btn-icon svg.msf-arrow-2 { transform: translate(-26px,26px); }\n.msf-btn:hover .msf-btn-icon svg.msf-arrow-1 { transform: translate(26px,-26px); }\n.msf-btn:hover .msf-btn-icon svg.msf-arrow-2 { transform: translate(0,0); }\n.msf-btn:hover .msf-btn-label { background: #d8d8d8; }\n\n.msf-foot {\n  margin-top: 64px;\n  padding-top: 28px;\n  border-top: 1px solid var(--msf-border);\n  font-family: var(--msf-font-mono);\n  font-size: 12px;\n  color: var(--msf-muted);\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  align-items: center;\n  text-align: center;\n  width: 100%;\n  max-width: 720px;\n}\n.msf-foot a {\n  color: var(--msf-fg);\n  text-decoration: none;\n  border-bottom: 1px solid rgba(255,255,255,.3);\n}\n.msf-foot a:hover { border-color: #fff; }\n\n.msf-success { text-align: center; padding: 60px 0; }\n.msf-success h2 { font-size: clamp(24px, 3.6vw, 40px); text-transform: uppercase; margin: 0 0 14px; }\n.msf-success p { font-family: var(--msf-font-mono); color: var(--msf-subtle); font-size: 14px; max-width: 420px; margin: 0 auto; }\n\n@media (max-width: 640px) {\n  .msf-wrap { padding: 64px 6% 64px; }\n  .msf-nav { flex-wrap: wrap; row-gap: 16px; }\n  .msf-btn { margin-left: 0; }\n}\n";
+
+  function injectStyles() {
+    var old = document.getElementById('msf-styles');
+    if (old && old.getAttribute('data-v') === '2') return;
+    if (old) old.parentNode.removeChild(old);
+    var styleEl = document.createElement('style');
+    styleEl.id = 'msf-styles';
+    styleEl.setAttribute('data-v', '2');
+    styleEl.textContent = CSS;
+    document.head.appendChild(styleEl);
+  }
+
+  function arrowIconSVG(cls) {
+    return '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>';
+  }
+
+  var CLIP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>';
+
+  function buildPillButton(label, onClick) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'msf-btn';
+    var lab = document.createElement('span');
+    lab.className = 'msf-btn-label';
+    lab.textContent = label;
+    var icon = document.createElement('span');
+    icon.className = 'msf-btn-icon';
+    icon.innerHTML = arrowIconSVG('msf-arrow-1') + arrowIconSVG('msf-arrow-2');
+    btn.appendChild(lab);
+    btn.appendChild(icon);
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1).replace('.', ',') + ' MB';
+  }
+
+  function fileKind(file) {
+    var t = file.type || '';
+    if (t.indexOf('image/') === 0) return 'Imagem';
+    if (t.indexOf('audio/') === 0) return 'Áudio';
+    if (t === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'PDF';
+    return '';
+  }
+
+  function buildMultistepForm(opts) {
+    opts = opts || {};
+    injectStyles();
+
+    var destEmail = opts.destEmail || 'cttquadrooss@gmail.com';
+    var whatsapp = opts.whatsapp || 'https://wa.me/5511949202345';
+    var whatsappDisplay = opts.whatsappDisplay || '(+55) 11 94920-2345';
+
+    var STEPS = [
+      {
+        key: 'name', type: 'text',
+        eyebrow: 'ETAPA 01 DE 04',
+        headline: 'SALVEE. COMO POSSO TE CHAMAR?',
+        subhead: 'Sem formalidades nem pressão. Leva menos de um minuto, de verdade.',
+        placeholder: 'Seu nome ou o nome da sua marca...'
+      },
+      {
+        key: 'email', type: 'email',
+        eyebrow: 'ETAPA 02 DE 04',
+        headline: 'ME PASSA SEU EMAIL?',
+        subhead: 'Zero spam. Só quero ter salvo para mantermos o contato alinhado.',
+        placeholder: 'Digite seu endereço de e-mail...'
+      },
+      {
+        key: 'subject', type: 'text',
+        eyebrow: 'ETAPA 03 DE 04',
+        headline: 'QUAL É O ASSUNTO PRINCIPAL?',
+        subhead: 'Dê um título curto ou contexto rápido para a gente se situar.',
+        placeholder: 'Ex: Campanha de Lançamento / Videoclipe / Conteúdo Digital...'
+      },
+      {
+        key: 'message', type: 'textarea', attachments: true,
+        eyebrow: 'ETAPA 04 DE 04',
+        headline: 'CONTE UM POUCO SOBRE A IDEIA.',
+        subhead: 'Diga o essencial que a gente desenrola a partir daí.',
+        placeholder: 'Mesmo uma linha já é suficiente para começarmos...'
+      }
+    ];
+
+    var state = { step: 0, answers: {}, files: [], sending: false };
+
+    var root = document.createElement('div');
+    root.className = 'msf-wrap';
+
+    var progressTrack = document.createElement('div');
+    progressTrack.className = 'msf-progress-track';
+    var progressBar = document.createElement('div');
+    progressBar.className = 'msf-progress-bar';
+    progressTrack.appendChild(progressBar);
+
+    var card = document.createElement('div');
+    card.className = 'msf-card';
+    card.style.transition = 'opacity .25s ease';
+
+    root.appendChild(progressTrack);
+    root.appendChild(card);
+
+    /* Seletor de arquivos: criado uma vez e mantido fora do card, para
+       os anexos não se perderem quando a pessoa volta/avança etapas. */
+    var picker = document.createElement('input');
+    picker.type = 'file';
+    picker.multiple = true;
+    picker.accept = ACCEPT;
+    picker.style.display = 'none';
+    root.appendChild(picker);
+
+    var foot = document.createElement('div');
+    foot.className = 'msf-foot';
+    var footText = document.createElement('span');
+    footText.textContent = 'Prefere mandar um e-mail direto ou chamar no WhatsApp?';
+    var footLinks = document.createElement('span');
+    var emailLink = document.createElement('a');
+    emailLink.href = 'mailto:' + destEmail;
+    emailLink.textContent = destEmail;
+    var waLink = document.createElement('a');
+    waLink.href = whatsapp;
+    waLink.target = '_blank';
+    waLink.rel = 'noopener';
+    waLink.textContent = whatsappDisplay;
+    footLinks.appendChild(emailLink);
+    footLinks.appendChild(document.createTextNode(' · '));
+    footLinks.appendChild(waLink);
+    foot.appendChild(footText);
+    foot.appendChild(footLinks);
+    root.appendChild(foot);
+
+    function totalBytes() {
+      return state.files.reduce(function (s, f) { return s + f.size; }, 0);
+    }
+
+    function validateStep(idx) {
+      var step = STEPS[idx];
+      var val = state.answers[step.key];
+      if (!val || !String(val).trim()) return false;
+      if (step.type === 'email') {
+        var re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(String(val).trim());
+      }
+      return true;
+    }
+
+    function addHidden(form, name, value) {
+      var i = document.createElement('input');
+      i.type = 'hidden';
+      i.name = name;
+      i.value = value;
+      form.appendChild(i);
+    }
+
+    function submitForm(btn) {
+      if (state.sending) return;
+      state.sending = true;
+      if (btn) {
+        btn.disabled = true;
+        var lab = btn.querySelector('.msf-btn-label');
+        if (lab) lab.textContent = 'ENVIANDO...';
+      }
+
+      var a = state.answers;
+      var sinkName = 'msf-sink-' + Date.now();
+      var sink = document.createElement('iframe');
+      sink.name = sinkName;
+      sink.style.display = 'none';
+      document.body.appendChild(sink);
+
+      var form = document.createElement('form');
+      form.method = 'POST';
+      form.action = 'https://formsubmit.co/' + destEmail;
+      form.enctype = 'multipart/form-data';
+      form.target = sinkName;
+      form.style.display = 'none';
+
+      addHidden(form, '_subject', 'Novo projeto via site — ' + (a.name || ''));
+      addHidden(form, '_captcha', 'false');
+      addHidden(form, '_template', 'table');
+      addHidden(form, 'Nome', a.name || '');
+      addHidden(form, 'email', a.email || '');
+      addHidden(form, 'Assunto', a.subject || '');
+      addHidden(form, 'Mensagem', a.message || '');
+
+      if (state.files.length && typeof DataTransfer !== 'undefined') {
+        state.files.forEach(function (file, i) {
+          try {
+            var dt = new DataTransfer();
+            dt.items.add(file);
+            var fi = document.createElement('input');
+            fi.type = 'file';
+            fi.name = 'anexo_' + (i + 1);
+            fi.files = dt.files;
+            form.appendChild(fi);
+          } catch (e) {}
+        });
+      }
+
+      document.body.appendChild(form);
+
+      var done = false;
+      function finish() {
+        if (done) return;
+        done = true;
+        renderSuccess();
+        setTimeout(function () {
+          if (form.parentNode) form.parentNode.removeChild(form);
+          if (sink.parentNode) sink.parentNode.removeChild(sink);
+        }, 2000);
+      }
+      sink.addEventListener('load', finish);
+      setTimeout(finish, 20000);
+      form.submit();
+    }
+
+    function renderSuccess() {
+      card.style.opacity = '0';
+      setTimeout(function () {
+        card.innerHTML = '';
+        progressBar.style.width = '100%';
+        var box = document.createElement('div');
+        box.className = 'msf-success';
+        var h = document.createElement('h2');
+        h.textContent = 'Nos falamos em breve...';
+        var p = document.createElement('p');
+        p.textContent = 'Se for urgente, me chama no WhatsApp logo abaixo.';
+        box.appendChild(h);
+        box.appendChild(p);
+        card.appendChild(box);
+        requestAnimationFrame(function () { card.style.opacity = '1'; });
+      }, 180);
+    }
+
+    function goTo(idx) {
+      state.step = idx;
+      render();
+    }
+
+    function buildAttachments(errorEl) {
+      var wrap = document.createElement('div');
+      wrap.className = 'msf-attach';
+
+      var row = document.createElement('div');
+      row.className = 'msf-attach-row';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'msf-attach-btn';
+      btn.innerHTML = CLIP_SVG + '<span>Anexar arquivos</span>';
+      var hint = document.createElement('span');
+      hint.className = 'msf-attach-hint';
+      hint.textContent = 'Opcional · PDF, imagem ou áudio · até 10 MB no total';
+      row.appendChild(btn);
+      row.appendChild(hint);
+
+      var list = document.createElement('ul');
+      list.className = 'msf-files';
+
+      function drawList() {
+        list.innerHTML = '';
+        state.files.forEach(function (file, i) {
+          var li = document.createElement('li');
+          li.className = 'msf-file';
+          var kind = document.createElement('span');
+          kind.className = 'msf-file-kind';
+          kind.textContent = fileKind(file);
+          var name = document.createElement('span');
+          name.className = 'msf-file-name';
+          name.textContent = file.name;
+          var size = document.createElement('span');
+          size.className = 'msf-file-size';
+          size.textContent = formatSize(file.size);
+          var rm = document.createElement('button');
+          rm.type = 'button';
+          rm.className = 'msf-file-remove';
+          rm.setAttribute('aria-label', 'Remover ' + file.name);
+          rm.textContent = '×';
+          rm.addEventListener('click', function () {
+            state.files.splice(i, 1);
+            errorEl.textContent = '';
+            drawList();
+          });
+          li.appendChild(kind);
+          li.appendChild(name);
+          li.appendChild(size);
+          li.appendChild(rm);
+          list.appendChild(li);
+        });
+      }
+
+      btn.addEventListener('click', function () {
+        picker.value = '';
+        picker.onchange = function () {
+          var added = Array.prototype.slice.call(picker.files || []);
+          var rejected = [];
+          added.forEach(function (file) {
+            if (!fileKind(file)) { rejected.push(file.name); return; }
+            if (totalBytes() + file.size > MAX_TOTAL_BYTES) {
+              errorEl.textContent = 'Os anexos passam de 10 MB no total. Se for maior, manda um link (Drive, WeTransfer...) na mensagem.';
+              return;
+            }
+            state.files.push(file);
+          });
+          if (rejected.length) errorEl.textContent = 'Só aceito PDF, imagem ou áudio: ' + rejected.join(', ');
+          drawList();
+        };
+        picker.click();
+      });
+
+      drawList();
+      wrap.appendChild(row);
+      wrap.appendChild(list);
+      return wrap;
+    }
+
+    function render() {
+      var idx = state.step;
+      var step = STEPS[idx];
+
+      card.style.opacity = '0';
+      setTimeout(function () {
+        card.innerHTML = '';
+        progressBar.style.width = (idx / (STEPS.length - 1) * 100) + '%';
+
+        var eyebrow = document.createElement('span');
+        eyebrow.className = 'msf-eyebrow';
+        eyebrow.textContent = step.eyebrow;
+        card.appendChild(eyebrow);
+
+        var headline = document.createElement('h2');
+        headline.className = 'msf-headline';
+        headline.textContent = step.headline;
+        card.appendChild(headline);
+
+        var subhead = document.createElement('p');
+        subhead.className = 'msf-subhead';
+        subhead.textContent = step.subhead;
+        card.appendChild(subhead);
+
+        var fieldWrap = document.createElement('div');
+        fieldWrap.className = 'msf-field';
+        var inputEl;
+
+        if (step.type === 'textarea') {
+          inputEl = document.createElement('textarea');
+          inputEl.className = 'msf-textarea';
+        } else {
+          inputEl = document.createElement('input');
+          inputEl.type = step.type;
+          inputEl.className = 'msf-input';
+        }
+        inputEl.placeholder = step.placeholder;
+        inputEl.value = state.answers[step.key] || '';
+        fieldWrap.appendChild(inputEl);
+
+        var errorEl = document.createElement('div');
+        errorEl.className = 'msf-error';
+
+        if (step.attachments) fieldWrap.appendChild(buildAttachments(errorEl));
+
+        fieldWrap.appendChild(errorEl);
+        card.appendChild(fieldWrap);
+
+        inputEl.addEventListener('input', function () {
+          state.answers[step.key] = inputEl.value;
+          errorEl.textContent = '';
+        });
+        if (step.type !== 'textarea') {
+          inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); goNext(); }
+          });
+        }
+
+        var nav = document.createElement('div');
+        nav.className = 'msf-nav';
+        if (idx > 0) {
+          var back = document.createElement('button');
+          back.type = 'button';
+          back.className = 'msf-back';
+          back.textContent = '← VOLTAR';
+          back.addEventListener('click', function () { goTo(idx - 1); });
+          nav.appendChild(back);
+        }
+        var isLast = idx === STEPS.length - 1;
+        var fwd = buildPillButton(isLast ? 'ENVIAR PROJETO →' : 'AVANÇAR →', function () { goNext(); });
+        nav.appendChild(fwd);
+        card.appendChild(nav);
+
+        function goNext() {
+          if (!validateStep(idx)) {
+            errorEl.textContent = step.type === 'email' ? 'Digite um e-mail válido.' : 'Esse campo é necessário pra continuar.';
+            return;
+          }
+          if (isLast) { submitForm(fwd); return; }
+          goTo(idx + 1);
+        }
+
+        requestAnimationFrame(function () { card.style.opacity = '1'; });
+        if (idx > 0) { try { inputEl.focus({ preventScroll: true }); } catch (e) {} }
+      }, 180);
+    }
+
+    render();
+    return root;
+  }
+
+  parentWindow.__msfBuildForm = buildMultistepForm;
+
+  /* ---------------- Home page mount ---------------- */
+  var homeMounted = false;
+  function tryMountHome(attemptsLeft) {
+    if (homeMounted || document.getElementById('msf-home-wrap')) return;
+    var anchor = document.getElementById('fmag-wrap');
+    var isHome = document.body && document.body.classList.contains('home');
+    if (!isHome || !anchor) {
+      if (attemptsLeft > 0) setTimeout(function () { tryMountHome(attemptsLeft - 1); }, 400);
+      return;
+    }
+    var formRoot = buildMultistepForm({});
+    formRoot.id = 'msf-home-wrap';
+    anchor.insertAdjacentElement('afterend', formRoot);
+    homeMounted = true;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { tryMountHome(30); });
+  } else {
+    tryMountHome(30);
+  }
+})();
+</script>

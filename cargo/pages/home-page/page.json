@@ -1,0 +1,518 @@
+{
+  "id": "L3482832595",
+  "set_id": "root",
+  "title": "Home page",
+  "purl": "home-page",
+  "page_type": "page",
+  "display": true,
+  "stack": false,
+  "pin": false,
+  "overlay": false,
+  "password_enabled": false,
+  "sort": 5,
+  "index": 5,
+  "page_count": null,
+  "page_design_options": null,
+  "backdrops": {
+    "activeBackdrop": "legacy/video",
+    "backdropSettings": {
+      "legacy/video": {
+        "image": "S3136527725086700142637145980977",
+        "video_url": "https://youtu.be/JSmovrxoj7w"
+      }
+    }
+  },
+  "pin_options": {},
+  "overlay_options": {},
+  "thumb_media_id": 87170945,
+  "thumbnail": {
+    "id": 87170945,
+    "master_muid": 15269937,
+    "name": "fontbolt.png",
+    "display_name": "fontbolt.png",
+    "hash": "S3136527725086700142637145980977",
+    "width": 788,
+    "height": 111,
+    "file_size": 11100,
+    "file_type": "png",
+    "mime_type": "image/png",
+    "is_image": true,
+    "is_video": false,
+    "is_url": false,
+    "is_placeholder": false,
+    "has_audio_track": null,
+    "duration": null,
+    "url": null,
+    "url_id": null,
+    "url_thumb": null,
+    "url_type": null,
+    "created_at": "2026-09-16 22:58:31.093874",
+    "updated_at": "2026-09-16 22:58:31.093874",
+    "options": null
+  },
+  "thumb_meta": [],
+  "tags": [],
+  "access_level": "public",
+  "media": [
+    {
+      "hash": "S3136527725086700142637145980977",
+      "name": "fontbolt.png",
+      "width": 788,
+      "height": 111,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "I3136663550713817643058259886129",
+      "name": "Prancheta-2.png",
+      "width": 385,
+      "height": 143,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "G3136666328811921887790442807345",
+      "name": "Prancheta-2.png",
+      "width": 385,
+      "height": 143,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "V3158456141671124451019272552497",
+      "name": "Prancheta-30.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "Y3158456141523550498429596139569",
+      "name": "Prancheta-21.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "Y3158456141892485379903787171889",
+      "name": "Prancheta-42.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "T3158456141708017939166691655729",
+      "name": "Prancheta-32.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "E3158456141302189569545081520177",
+      "name": "Prancheta-9.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "A3158456141763358171387820310577",
+      "name": "Prancheta-35.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "S3158456141560443986577015242801",
+      "name": "Prancheta-23.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "G3158456141597337474724434346033",
+      "name": "Prancheta-25.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "E3158456141209955849176533762097",
+      "name": "Prancheta-4.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "F3158456141689571195092982104113",
+      "name": "Prancheta-31.png",
+      "width": 1000,
+      "height": 355,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "O3158456141468210266208467484721",
+      "name": "Prancheta-18.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "M3158456141910932123977496723505",
+      "name": "Prancheta-44.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "P3158456141505103754355886587953",
+      "name": "Prancheta-20.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "E3158456141486657010282177036337",
+      "name": "Prancheta-19.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "W3158456141781804915461529862193",
+      "name": "Prancheta-36.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "H3158456141173062361029114658865",
+      "name": "Prancheta-2.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "X3158456141228402593250243313713",
+      "name": "Prancheta-5.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "G3158456141837145147682658517041",
+      "name": "Prancheta-39.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "K3158456141246849337323952865329",
+      "name": "Prancheta-6.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "G3158456141449763522134757933105",
+      "name": "Prancheta-17.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "J3158456141578890730650724794417",
+      "name": "Prancheta-24.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "B3158456141818698403608948965425",
+      "name": "Prancheta-38.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "X3158456141874038635830077620273",
+      "name": "Prancheta-41.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "P3158456141855591891756368068657",
+      "name": "Prancheta-40.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "V3158456141800251659535239413809",
+      "name": "Prancheta-37.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "J3158456141339083057692500623409",
+      "name": "Prancheta-11.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "Z3158456141375976545839919726641",
+      "name": "Prancheta-13.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "E3158456141929378868051206275121",
+      "name": "Prancheta-45.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "U3158456141265296081397662416945",
+      "name": "Prancheta-7.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "U3158456141652677706945563000881",
+      "name": "Prancheta-29.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "Z3158456141283742825471371968561",
+      "name": "Prancheta-8.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "V3158456141412870033987338829873",
+      "name": "Prancheta-15.png",
+      "width": 1000,
+      "height": 355,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "G3158456141394423289913629278257",
+      "name": "Prancheta-14.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "S3158456141541997242503305691185",
+      "name": "Prancheta-22.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "O3158456141357529801766210175025",
+      "name": "Prancheta-12.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "X3158456141320636313618791071793",
+      "name": "Prancheta-10.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "S3158456141634230962871853449265",
+      "name": "Prancheta-27.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "P3158456141191509105102824210481",
+      "name": "Prancheta-3.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "G3158456141154615616955405107249",
+      "name": "Prancheta-1.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "M3158456141744911427314110758961",
+      "name": "Prancheta-34.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "Y3158456141431316778061048381489",
+      "name": "Prancheta-16.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "W3158456141726464683240401207345",
+      "name": "Prancheta-33.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    },
+    {
+      "hash": "F3158456141615784218798143897649",
+      "name": "Prancheta-26.png",
+      "width": 1000,
+      "height": 354,
+      "mime_type": "image/png",
+      "is_video": false,
+      "is_url": false,
+      "url": null
+    }
+  ]
+}

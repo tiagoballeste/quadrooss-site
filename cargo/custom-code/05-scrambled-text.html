@@ -1,0 +1,120 @@
+<script>
+/* ============================================================
+   ScrambledText — vanilla JS port (React Bits -> Cargo.site)
+   Glitch/scramble-on-hover effect: characters near the pointer
+   flicker through scrambleChars before settling back to the
+   original letter. Mounts on the About page bio paragraphs
+   inside .ab-history (the "ATE AQUI" section).
+   Runs bridged inside an iframe via srcdoc (see dome-gallery-bridged.js
+   / option-wheel-bridged.js / logo-loop-bridged.js / scroll-reveal-bridged.js for why).
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var isBridged = (function () { try { return window.parent && window.parent !== window && !!window.parent.document; } catch (e) { return false; } })();
+  var parentWindow = isBridged ? window.parent : window;
+  var document = parentWindow.document;
+
+  var CFG = {
+    radius: 100,
+    duration: 1.2,     // seconds, max flicker length for a char right under the pointer
+    stepMs: 45,         // flicker refresh rate
+    scrambleChars: '.:'
+  };
+
+  var mounted = false;
+  var chars = [];
+  var histEl = null;
+
+  function splitChars(p) {
+    var text = p.textContent;
+    p.textContent = '';
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (/\s/.test(ch)) {
+        p.appendChild(document.createTextNode(ch));
+      } else {
+        var span = document.createElement('span');
+        span.className = 'sc-char';
+        span.textContent = ch;
+        span.setAttribute('data-content', ch);
+        p.appendChild(span);
+        chars.push(span);
+      }
+    }
+  }
+
+  function scramble(el, distFrac) {
+    var content = el.getAttribute('data-content');
+    var ms = Math.max(80, CFG.duration * 1000 * (1 - distFrac));
+    if (el._scTimer) {
+      clearInterval(el._scTimer);
+    }
+    var elapsed = 0;
+    el._scTimer = setInterval(function () {
+      elapsed += CFG.stepMs;
+      if (elapsed >= ms) {
+        clearInterval(el._scTimer);
+        el._scTimer = null;
+        el.textContent = content;
+        return;
+      }
+      el.textContent = CFG.scrambleChars.charAt(Math.floor(Math.random() * CFG.scrambleChars.length));
+    }, CFG.stepMs);
+  }
+
+  var lastMoveT = 0;
+  function onMove(e) {
+    var now = Date.now();
+    if (now - lastMoveT < 50) return;
+    lastMoveT = now;
+    if (!histEl) return;
+    var hr = histEl.getBoundingClientRect();
+    if (e.clientY < hr.top - CFG.radius || e.clientY > hr.bottom + CFG.radius) return;
+    if (e.clientX < hr.left - CFG.radius || e.clientX > hr.right + CFG.radius) return;
+
+    var x = e.clientX, y = e.clientY;
+    for (var i = 0; i < chars.length; i++) {
+      var el = chars[i];
+      var rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) continue;
+      var cx = rect.left + rect.width / 2;
+      var cy = rect.top + rect.height / 2;
+      var dx = x - cx, dy = y - cy;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < CFG.radius) {
+        scramble(el, dist / CFG.radius);
+      }
+    }
+  }
+
+  function buildScramble() {
+    var hist = document.querySelector('.ab-history');
+    if (!hist || hist.getAttribute('data-sc-mounted')) return;
+    hist.setAttribute('data-sc-mounted', '1');
+    histEl = hist;
+    var ps = hist.querySelectorAll('p');
+    for (var i = 0; i < ps.length; i++) {
+      splitChars(ps[i]);
+    }
+    parentWindow.addEventListener('pointermove', onMove, { passive: true });
+    mounted = true;
+  }
+
+  function tryMount(attemptsLeft) {
+    if (mounted) return;
+    if (!document.querySelector('.ab-history p')) {
+      if (attemptsLeft > 0) setTimeout(function () { tryMount(attemptsLeft - 1); }, 400);
+      return;
+    }
+    buildScramble();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { tryMount(20); });
+  } else {
+    tryMount(20);
+  }
+})();
+
+</script>

@@ -1,0 +1,727 @@
+<script>/* ============================================================
+   DomeGallery — vanilla JS port (React Bits -> Cargo.site)
+   Fonte original: React + @use-gesture/react
+   Porte: sem dependências, roda direto no navegador via <script>
+   injetado no Cargo. As fotos vêm de uma lista fixa (hash + nome de
+   arquivo) embutida no fim deste arquivo — ver DG_MEDIA_PAIRS — em vez
+   de serem lidas de <gallery-grid>, já que os 23 grids planos que
+   existiam na página Archive foram removidos (a pedido do Pedro, pra
+   essa aba ficar só com a esfera 3D).
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var isBridged = (function () { try { return window.parent && window.parent !== window && !!window.parent.document; } catch (e) { return false; } })();
+  var parentWindow = isBridged ? window.parent : window;
+  var document = parentWindow.document;
+  var ResizeObserver = parentWindow.ResizeObserver;
+  var requestAnimationFrame = function (cb) { return parentWindow.requestAnimationFrame(cb); };
+  var cancelAnimationFrame = function (id) { return parentWindow.cancelAnimationFrame(id); };
+  var location = parentWindow.location;
+  var localStorage = parentWindow.localStorage;
+
+  (function injectStyles() {
+    if (document.getElementById('dg-styles')) return;
+    var styleEl = document.createElement('style');
+    styleEl.id = 'dg-styles';
+    styleEl.textContent = ".dg-sphere-root {\n  position: relative;\n  width: 100%;\n  height: 80vh;\n  min-height: 520px;\n  max-height: 900px;\n  margin: 3rem 0;\n  --dg-radius: 520px;\n  --dg-viewer-pad: 72px;\n  --dg-circ: calc(var(--dg-radius) * 3.14);\n  --dg-rot-y: calc((360deg / var(--dg-segments-x)) / 2);\n  --dg-rot-x: calc((360deg / var(--dg-segments-y)) / 2);\n  --dg-item-width: calc(var(--dg-circ) / var(--dg-segments-x));\n  --dg-item-height: calc(var(--dg-circ) / var(--dg-segments-y));\n}\n\n.dg-sphere-root * { box-sizing: border-box; }\n\n.dg-sphere, .dg-item, .dg-item__image { transform-style: preserve-3d; }\n\n.dg-main {\n  position: absolute;\n  inset: 0;\n  display: grid;\n  place-items: center;\n  overflow: hidden;\n  touch-action: none;\n  user-select: none;\n  -webkit-user-select: none;\n  background: var(--dg-overlay-blur-color, #120F17);\n  border-radius: 12px;\n  cursor: grab;\n}\n.dg-main:active { cursor: grabbing; }\n\n.dg-stage {\n  width: 100%;\n  height: 100%;\n  display: grid;\n  place-items: center;\n  perspective: calc(var(--dg-radius) * 2);\n  perspective-origin: 50% 50%;\n  contain: layout paint size;\n}\n\n.dg-sphere {\n  transform: translateZ(calc(var(--dg-radius) * -1));\n  will-change: transform;\n}\n\n.dg-overlay, .dg-overlay--blur {\n  position: absolute;\n  inset: 0;\n  margin: auto;\n  z-index: 3;\n  pointer-events: none;\n}\n.dg-overlay {\n  background-image: radial-gradient(rgba(235, 235, 235, 0) 65%, var(--dg-overlay-blur-color, #120F17) 100%);\n}\n.dg-overlay--blur {\n  -webkit-mask-image: radial-gradient(rgba(235, 235, 235, 0) 70%, var(--dg-overlay-blur-color, #120F17) 90%);\n  mask-image: radial-gradient(rgba(235, 235, 235, 0) 70%, var(--dg-overlay-blur-color, #120F17) 90%);\n  backdrop-filter: blur(3px);\n}\n\n.dg-item {\n  width: calc(var(--dg-item-width) * var(--dg-item-size-x));\n  height: calc(var(--dg-item-height) * var(--dg-item-size-y));\n  position: absolute;\n  top: -999px; bottom: -999px; left: -999px; right: -999px;\n  margin: auto;\n  transform-origin: 50% 50%;\n  backface-visibility: hidden;\n  transition: transform 300ms;\n  transform: rotateY(calc(var(--dg-rot-y) * (var(--dg-offset-x) + ((var(--dg-item-size-x) - 1) / 2)) + var(--dg-rot-y-delta, 0deg)))\n    rotateX(calc(var(--dg-rot-x) * (var(--dg-offset-y) - ((var(--dg-item-size-y) - 1) / 2)) + var(--dg-rot-x-delta, 0deg)))\n    translateZ(var(--dg-radius));\n}\n\n.dg-item__image {\n  position: absolute;\n  display: block;\n  inset: 10px;\n  border-radius: var(--dg-tile-radius, 12px);\n  background: var(--dg-overlay-blur-color, #120F17);\n  overflow: hidden;\n  backface-visibility: hidden;\n  transition: transform 300ms;\n  cursor: pointer;\n  -webkit-tap-highlight-color: transparent;\n  touch-action: manipulation;\n  pointer-events: auto;\n  transform: translateZ(0);\n}\n.dg-item__image:focus { outline: none; }\n.dg-item__image img {\n  width: 100%; height: 100%; object-fit: cover;\n  pointer-events: none; backface-visibility: hidden;\n  filter: var(--dg-image-filter, none);\n}\n\n.dg-viewer {\n  position: absolute; inset: 0; z-index: 20;\n  pointer-events: none;\n  display: flex; align-items: center; justify-content: center;\n  padding: var(--dg-viewer-pad);\n}\n.dg-viewer .dg-frame { height: 100%; aspect-ratio: 1; border-radius: var(--dg-enlarge-radius, 32px); display: flex; }\n@media (max-aspect-ratio: 1/1) { .dg-viewer .dg-frame { height: auto; width: 100%; } }\n\n.dg-viewer .dg-scrim {\n  position: absolute; inset: 0; z-index: 10;\n  background: rgba(0, 0, 0, 0.4);\n  pointer-events: none; opacity: 0;\n  transition: opacity 500ms ease;\n  backdrop-filter: blur(3px);\n}\n.dg-sphere-root[data-enlarging='true'] .dg-viewer .dg-scrim { opacity: 1; pointer-events: all; }\n\n.dg-viewer .dg-enlarge {\n  position: absolute; z-index: 30;\n  border-radius: var(--dg-enlarge-radius, 32px);\n  overflow: visible;\n  transition: transform 500ms ease, opacity 500ms ease;\n  transform-origin: top left;\n  pointer-events: all;\n}\n.dg-viewer .dg-enlarge > img {\n  width: 100%; height: 100%; object-fit: cover;\n  filter: var(--dg-image-filter, none);\n  border-radius: var(--dg-enlarge-radius, 32px);\n  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);\n  display: block;\n}\n.dg-sphere-root .dg-enlarge-closing img { filter: var(--dg-image-filter, none); }\n\n.dg-edge-fade {\n  position: absolute; left: 0; right: 0; height: 120px; z-index: 5;\n  pointer-events: none;\n  background: linear-gradient(to bottom, transparent, var(--dg-overlay-blur-color, #120F17));\n}\n.dg-edge-fade--top { top: 0; transform: rotate(180deg); }\n.dg-edge-fade--bottom { bottom: 0; }\n\nbody.dg-scroll-lock { overflow: hidden; }\n\n.dg-caption {\n  position: absolute;\n  left: 0; right: 0; bottom: -46px;\n  display: flex; align-items: center; justify-content: center;\n  gap: .5rem;\n  pointer-events: all;\n}\n.dg-caption-text {\n  color: rgba(255,255,255,0.85);\n  font-size: 0.85rem;\n  letter-spacing: 0.02em;\n  text-align: center;\n}\n.dg-caption-input {\n  width: 100%;\n  max-width: 420px;\n  background: rgba(255,255,255,0.08);\n  border: 1px solid rgba(255,255,255,0.25);\n  border-radius: 8px;\n  color: #fff;\n  font-size: 0.85rem;\n  padding: 0.45rem 0.7rem;\n  outline: none;\n}\n.dg-caption-input:focus { border-color: rgba(255,255,255,0.6); }\n.dg-caption-saved {\n  font-size: 0.75rem;\n  color: #9ae6b4;\n  opacity: 0;\n  transition: opacity 200ms ease;\n  white-space: nowrap;\n}\n\n.dg-edit-toggle {\n  position: absolute;\n  bottom: 10px; right: 10px;\n  width: 30px; height: 30px;\n  border-radius: 50%;\n  border: 1px solid rgba(255,255,255,0.2);\n  background: rgba(0,0,0,0.35);\n  color: rgba(255,255,255,0.5);\n  font-size: 13px;\n  cursor: pointer;\n  z-index: 40;\n  transition: opacity 200ms ease, color 200ms ease, border-color 200ms ease;\n  opacity: 0.35;\n}\n.dg-edit-toggle:hover { opacity: 1; color: #fff; border-color: rgba(255,255,255,0.6); }\n.dg-sphere-root.dg-edit-mode .dg-edit-toggle { opacity: 0.9; color: #9ae6b4; border-color: #9ae6b4; }\n\n.dg-copy-btn {\n  position: fixed;\n  left: 16px; bottom: 16px;\n  z-index: 9999;\n  background: #111;\n  color: #fff;\n  border: 1px solid rgba(255,255,255,0.25);\n  border-radius: 8px;\n  padding: 0.6rem 0.9rem;\n  font-size: 0.8rem;\n  cursor: pointer;\n}\n.dg-copy-btn:hover { border-color: rgba(255,255,255,0.6); }\n";
+    document.head.appendChild(styleEl);
+  })();
+
+  var clamp = function (v, min, max) { return Math.min(Math.max(v, min), max); };
+  var normalizeAngle = function (d) { return ((d % 360) + 360) % 360; };
+  var wrapAngleSigned = function (deg) {
+    var a = (((deg + 180) % 360) + 360) % 360;
+    return a - 180;
+  };
+  var getDataNumber = function (el, name, fallback) {
+    var attr = el.dataset[name];
+    var n = attr == null ? NaN : parseFloat(attr);
+    return isFinite(n) ? n : fallback;
+  };
+
+  function buildItems(pool, seg) {
+    var xCols = [];
+    for (var i = 0; i < seg; i++) xCols.push(-37 + i * 2);
+    var evenYs = [-4, -2, 0, 2, 4];
+    var oddYs = [-3, -1, 1, 3, 5];
+
+    var coords = [];
+    xCols.forEach(function (x, c) {
+      var ys = c % 2 === 0 ? evenYs : oddYs;
+      ys.forEach(function (y) { coords.push({ x: x, y: y, sizeX: 2, sizeY: 2 }); });
+    });
+
+    var totalSlots = coords.length;
+    if (pool.length === 0) return coords.map(function (c) { return Object.assign({}, c, { src: '', alt: '' }); });
+
+    var normalized = pool.map(function (image) {
+      if (typeof image === 'string') return { src: image, alt: '' };
+      return { src: image.src || '', alt: image.alt || '' };
+    });
+
+    var used = [];
+    for (var k = 0; k < totalSlots; k++) used.push(normalized[k % normalized.length]);
+
+    for (var j = 1; j < used.length; j++) {
+      if (used[j].src === used[j - 1].src) {
+        for (var m = j + 1; m < used.length; m++) {
+          if (used[m].src !== used[j].src) {
+            var tmp = used[j]; used[j] = used[m]; used[m] = tmp;
+            break;
+          }
+        }
+      }
+    }
+
+    return coords.map(function (c, idx) {
+      return Object.assign({}, c, { src: used[idx].src, alt: used[idx].alt });
+    });
+  }
+
+  function computeItemBaseRotation(offsetX, offsetY, sizeX, sizeY, segments) {
+    var unit = 360 / segments / 2;
+    var rotateY = unit * (offsetX + (sizeX - 1) / 2);
+    var rotateX = unit * (offsetY - (sizeY - 1) / 2);
+    return { rotateX: rotateX, rotateY: rotateY };
+  }
+
+  var CAP_PREFIX = 'dg_caption::';
+  function captionKey(src) { return CAP_PREFIX + src; }
+  function getCaption(src, fallbackAlt) {
+    try {
+      var v = localStorage.getItem(captionKey(src));
+      if (v != null) return v;
+    } catch (e) {}
+    return fallbackAlt || '';
+  }
+  function setCaption(src, text) {
+    try { localStorage.setItem(captionKey(src), text); } catch (e) {}
+  }
+  function isEditMode() {
+    try {
+      if (/[?&]edit=1/.test(location.search)) { localStorage.setItem('dg_edit_mode', '1'); }
+      return localStorage.getItem('dg_edit_mode') === '1';
+    } catch (e) { return false; }
+  }
+  function setEditMode(on) {
+    try { localStorage.setItem('dg_edit_mode', on ? '1' : '0'); } catch (e) {}
+  }
+
+  function DomeGallery(root, opts) {
+    opts = opts || {};
+    this.root = root;
+    this.images = opts.images && opts.images.length ? opts.images : [];
+    this.fit = opts.fit != null ? opts.fit : 0.5;
+    this.fitBasis = opts.fitBasis || 'auto';
+    this.minRadius = opts.minRadius != null ? opts.minRadius : 600;
+    this.maxRadius = opts.maxRadius != null ? opts.maxRadius : Infinity;
+    this.padFactor = opts.padFactor != null ? opts.padFactor : 0.25;
+    this.overlayBlurColor = opts.overlayBlurColor || '#120F17';
+    this.maxVerticalRotationDeg = opts.maxVerticalRotationDeg != null ? opts.maxVerticalRotationDeg : 5;
+    this.dragSensitivity = opts.dragSensitivity != null ? opts.dragSensitivity : 20;
+    this.enlargeTransitionMs = opts.enlargeTransitionMs != null ? opts.enlargeTransitionMs : 300;
+    this.segments = opts.segments != null ? opts.segments : 35;
+    this.dragDampening = opts.dragDampening != null ? opts.dragDampening : 2;
+    this.openedImageWidth = opts.openedImageWidth || '400px';
+    this.openedImageHeight = opts.openedImageHeight || '400px';
+    this.imageBorderRadius = opts.imageBorderRadius || '30px';
+    this.openedImageBorderRadius = opts.openedImageBorderRadius || '30px';
+    this.grayscale = !!opts.grayscale;
+
+    this.rotation = { x: 0, y: 0 };
+    this.startRot = { x: 0, y: 0 };
+    this.startPos = null;
+    this.dragging = false;
+    this.moved = false;
+    this.inertiaRAF = null;
+    this.opening = false;
+    this.openStartedAt = 0;
+    this.lastDragEndAt = 0;
+    this.scrollLocked = false;
+    this.focusedEl = null;
+    this.originalTilePosition = null;
+    this.velBuf = [];
+    this.lockedRadius = null;
+
+    this._build();
+    this._bindEvents();
+  }
+
+  DomeGallery.prototype._build = function () {
+    var self = this;
+    this.items = buildItems(this.images, this.segments);
+
+    this.root.classList.add('dg-sphere-root');
+    this.root.style.setProperty('--dg-segments-x', this.segments);
+    this.root.style.setProperty('--dg-segments-y', this.segments);
+    this.root.style.setProperty('--dg-overlay-blur-color', this.overlayBlurColor);
+    this.root.style.setProperty('--dg-tile-radius', this.imageBorderRadius);
+    this.root.style.setProperty('--dg-enlarge-radius', this.openedImageBorderRadius);
+    this.root.style.setProperty('--dg-image-filter', this.grayscale ? 'grayscale(1)' : 'none');
+
+    var main = document.createElement('main');
+    main.className = 'dg-main';
+
+    var stage = document.createElement('div');
+    stage.className = 'dg-stage';
+
+    var sphere = document.createElement('div');
+    sphere.className = 'dg-sphere';
+
+    this.items.forEach(function (it, i) {
+      var item = document.createElement('div');
+      item.className = 'dg-item';
+      item.style.setProperty('--dg-offset-x', it.x);
+      item.style.setProperty('--dg-offset-y', it.y);
+      item.style.setProperty('--dg-item-size-x', it.sizeX);
+      item.style.setProperty('--dg-item-size-y', it.sizeY);
+      item.dataset.src = it.src;
+      item.dataset.offsetX = it.x;
+      item.dataset.offsetY = it.y;
+      item.dataset.sizeX = it.sizeX;
+      item.dataset.sizeY = it.sizeY;
+
+      var img_wrap = document.createElement('div');
+      img_wrap.className = 'dg-item__image';
+      img_wrap.setAttribute('role', 'button');
+      img_wrap.setAttribute('tabindex', '0');
+      img_wrap.setAttribute('aria-label', it.alt || 'Abrir imagem');
+
+      if (it.src) {
+        var img = document.createElement('img');
+        img.src = it.src;
+        img.draggable = false;
+        img.alt = it.alt || '';
+        img_wrap.appendChild(img);
+      }
+
+      img_wrap.addEventListener('click', function (e) { self._onTileClick(e, item); });
+      img_wrap.addEventListener('pointerup', function (e) { self._onTilePointerUp(e, item); });
+
+      item.appendChild(img_wrap);
+      sphere.appendChild(item);
+    });
+
+    stage.appendChild(sphere);
+    main.appendChild(stage);
+
+    var overlay = document.createElement('div');
+    overlay.className = 'dg-overlay';
+    var overlayBlur = document.createElement('div');
+    overlayBlur.className = 'dg-overlay dg-overlay--blur';
+    var edgeTop = document.createElement('div');
+    edgeTop.className = 'dg-edge-fade dg-edge-fade--top';
+    var edgeBottom = document.createElement('div');
+    edgeBottom.className = 'dg-edge-fade dg-edge-fade--bottom';
+
+    var viewer = document.createElement('div');
+    viewer.className = 'dg-viewer';
+    var scrim = document.createElement('div');
+    scrim.className = 'dg-scrim';
+    var frame = document.createElement('div');
+    frame.className = 'dg-frame';
+    viewer.appendChild(scrim);
+    viewer.appendChild(frame);
+
+    main.appendChild(overlay);
+    main.appendChild(overlayBlur);
+    main.appendChild(edgeTop);
+    main.appendChild(edgeBottom);
+    main.appendChild(viewer);
+
+    this.root.appendChild(main);
+
+    var editToggle = document.createElement('button');
+    editToggle.type = 'button';
+    editToggle.className = 'dg-edit-toggle';
+    editToggle.textContent = '✎';
+    editToggle.title = 'Editar legendas';
+    editToggle.addEventListener('click', function () {
+      setEditMode(!isEditMode());
+      self.root.classList.toggle('dg-edit-mode', isEditMode());
+      self._renderCopyButton();
+    });
+    this.root.appendChild(editToggle);
+
+    this.main = main;
+    this.sphere = sphere;
+    this.viewer = viewer;
+    this.scrim = scrim;
+    this.frame = frame;
+    this.editToggle = editToggle;
+
+    if (isEditMode()) this.root.classList.add('dg-edit-mode');
+    this._renderCopyButton();
+    this._applyTransform(0, 0);
+    this._observeResize();
+  };
+
+  DomeGallery.prototype._renderCopyButton = function () {
+    var self = this;
+    if (this.copyBtn) { this.copyBtn.remove(); this.copyBtn = null; }
+    if (!isEditMode()) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dg-copy-btn';
+    btn.textContent = 'Copiar legendas (JSON)';
+    btn.addEventListener('click', function () {
+      var out = self.items
+        .filter(function (it) { return it.src; })
+        .reduce(function (acc, it) {
+          if (!acc.some(function (o) { return o.src === it.src; })) {
+            acc.push({ src: it.src, caption: getCaption(it.src, it.alt) });
+          }
+          return acc;
+        }, []);
+      var json = JSON.stringify(out, null, 2);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(json).then(function () {
+          btn.textContent = 'Copiado!';
+          setTimeout(function () { btn.textContent = 'Copiar legendas (JSON)'; }, 1500);
+        });
+      } else {
+        parentWindow.prompt('Copie o JSON abaixo:', json);
+      }
+    });
+    document.body.appendChild(btn);
+    this.copyBtn = btn;
+  };
+
+  DomeGallery.prototype._applyTransform = function (xDeg, yDeg) {
+    if (this.sphere) {
+      this.sphere.style.transform = 'translateZ(calc(var(--dg-radius) * -1)) rotateX(' + xDeg + 'deg) rotateY(' + yDeg + 'deg)';
+    }
+  };
+
+  DomeGallery.prototype._observeResize = function () {
+    var self = this;
+    var ro = new ResizeObserver(function (entries) {
+      var cr = entries[0].contentRect;
+      var w = Math.max(1, cr.width), h = Math.max(1, cr.height);
+      var minDim = Math.min(w, h), maxDim = Math.max(w, h), aspect = w / h;
+      var basis;
+      switch (self.fitBasis) {
+        case 'min': basis = minDim; break;
+        case 'max': basis = maxDim; break;
+        case 'width': basis = w; break;
+        case 'height': basis = h; break;
+        default: basis = aspect >= 1.3 ? w : minDim;
+      }
+      var radius = basis * self.fit;
+      var heightGuard = h * 1.35;
+      radius = Math.min(radius, heightGuard);
+      radius = clamp(radius, self.minRadius, self.maxRadius);
+      self.lockedRadius = Math.round(radius);
+
+      var viewerPad = Math.max(8, Math.round(minDim * self.padFactor));
+      self.root.style.setProperty('--dg-radius', self.lockedRadius + 'px');
+      self.root.style.setProperty('--dg-viewer-pad', viewerPad + 'px');
+      self._applyTransform(self.rotation.x, self.rotation.y);
+    });
+    ro.observe(this.root);
+    this._ro = ro;
+  };
+
+  DomeGallery.prototype._stopInertia = function () {
+    if (this.inertiaRAF) { cancelAnimationFrame(this.inertiaRAF); this.inertiaRAF = null; }
+  };
+
+  DomeGallery.prototype._startInertia = function (vx, vy) {
+    var self = this;
+    var MAX_V = 1.4;
+    var vX = clamp(vx, -MAX_V, MAX_V) * 80;
+    var vY = clamp(vy, -MAX_V, MAX_V) * 80;
+    var frames = 0;
+    var d = clamp(this.dragDampening != null ? this.dragDampening : 0.6, 0, 1);
+    var frictionMul = 0.94 + 0.055 * d;
+    var stopThreshold = 0.015 - 0.01 * d;
+    var maxFrames = Math.round(90 + 270 * d);
+
+    function step() {
+      vX *= frictionMul; vY *= frictionMul;
+      if (Math.abs(vX) < stopThreshold && Math.abs(vY) < stopThreshold) { self.inertiaRAF = null; return; }
+      if (++frames > maxFrames) { self.inertiaRAF = null; return; }
+      var nextX = clamp(self.rotation.x - vY / 200, -self.maxVerticalRotationDeg, self.maxVerticalRotationDeg);
+      var nextY = wrapAngleSigned(self.rotation.y + vX / 200);
+      self.rotation = { x: nextX, y: nextY };
+      self._applyTransform(nextX, nextY);
+      self.inertiaRAF = requestAnimationFrame(step);
+    }
+    this._stopInertia();
+    this.inertiaRAF = requestAnimationFrame(step);
+  };
+
+  DomeGallery.prototype._lockScroll = function () {
+    if (this.scrollLocked) return;
+    this.scrollLocked = true;
+    document.body.classList.add('dg-scroll-lock');
+  };
+  DomeGallery.prototype._unlockScroll = function () {
+    if (!this.scrollLocked) return;
+    if (this.root.getAttribute('data-enlarging') === 'true') return;
+    this.scrollLocked = false;
+    document.body.classList.remove('dg-scroll-lock');
+  };
+
+  DomeGallery.prototype._bindEvents = function () {
+    var self = this;
+
+    this.main.addEventListener('pointerdown', function (e) {
+      if (self.focusedEl) return;
+      self._stopInertia();
+      self.dragging = true;
+      self.moved = false;
+      self.activePointerId = e.pointerId;
+      self.startRot = { x: self.rotation.x, y: self.rotation.y };
+      self.startPos = { x: e.clientX, y: e.clientY };
+      self.velBuf = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
+    });
+
+    this.main.addEventListener('pointermove', function (e) {
+      if (self.focusedEl || !self.dragging || !self.startPos) return;
+      var dxTotal = e.clientX - self.startPos.x;
+      var dyTotal = e.clientY - self.startPos.y;
+      if (!self.moved) {
+        var dist2 = dxTotal * dxTotal + dyTotal * dyTotal;
+        if (dist2 > 16) {
+          self.moved = true;
+          try { self.main.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+      }
+      var nextX = clamp(self.startRot.x - dyTotal / self.dragSensitivity, -self.maxVerticalRotationDeg, self.maxVerticalRotationDeg);
+      var nextY = wrapAngleSigned(self.startRot.y + dxTotal / self.dragSensitivity);
+      if (self.rotation.x !== nextX || self.rotation.y !== nextY) {
+        self.rotation = { x: nextX, y: nextY };
+        self._applyTransform(nextX, nextY);
+      }
+      self.velBuf.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+      if (self.velBuf.length > 6) self.velBuf.shift();
+    });
+
+    function onUp(e) {
+      try { self.main.releasePointerCapture(e.pointerId); } catch (err) {}
+      if (self.focusedEl || !self.dragging) return;
+      self.dragging = false;
+      var vx = 0, vy = 0;
+      if (self.velBuf.length >= 2) {
+        var first = self.velBuf[0];
+        var last = self.velBuf[self.velBuf.length - 1];
+        var dt = Math.max(1, last.t - first.t);
+        vx = clamp(((last.x - first.x) / dt) * 1, -1.2, 1.2);
+        vy = clamp(((last.y - first.y) / dt) * 1, -1.2, 1.2);
+      }
+      if (Math.abs(vx) > 0.02 || Math.abs(vy) > 0.02) self._startInertia(vx, vy);
+      if (self.moved) self.lastDragEndAt = performance.now();
+      self.moved = false;
+      self.startPos = null;
+    }
+    this.main.addEventListener('pointerup', onUp);
+    this.main.addEventListener('pointercancel', onUp);
+
+    this.scrim.addEventListener('click', function () { self._close(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') self._close();
+    });
+  };
+
+  DomeGallery.prototype._onTileClick = function (e, tile) {
+    if (this.dragging) return;
+    if (this.moved) return;
+    if (performance.now() - this.lastDragEndAt < 80) return;
+    if (this.opening) return;
+    this._open(tile);
+  };
+  DomeGallery.prototype._onTilePointerUp = function (e, tile) {
+    if (e.pointerType !== 'touch') return;
+    if (this.dragging) return;
+    if (this.moved) return;
+    if (performance.now() - this.lastDragEndAt < 80) return;
+    if (this.opening) return;
+    this._open(tile);
+  };
+
+  DomeGallery.prototype._open = function (el) {
+    var self = this;
+    if (this.opening) return;
+    var imgWrap = el.querySelector('.dg-item__image');
+    if (!imgWrap) return;
+    this.opening = true;
+    this.openStartedAt = performance.now();
+    this._lockScroll();
+
+    var parent = el;
+    this.focusedEl = imgWrap;
+    imgWrap.setAttribute('data-focused', 'true');
+
+    var offsetX = getDataNumber(parent, 'offsetX', 0);
+    var offsetY = getDataNumber(parent, 'offsetY', 0);
+    var sizeX = getDataNumber(parent, 'sizeX', 2);
+    var sizeY = getDataNumber(parent, 'sizeY', 2);
+    var parentRot = computeItemBaseRotation(offsetX, offsetY, sizeX, sizeY, this.segments);
+    var parentY = normalizeAngle(parentRot.rotateY);
+    var globalY = normalizeAngle(this.rotation.y);
+    var rotY = -(parentY + globalY) % 360;
+    if (rotY < -180) rotY += 360;
+    var rotX = -parentRot.rotateX - this.rotation.x;
+    parent.style.setProperty('--dg-rot-y-delta', rotY + 'deg');
+    parent.style.setProperty('--dg-rot-x-delta', rotX + 'deg');
+
+    var refDiv = document.createElement('div');
+    refDiv.className = 'dg-item__image dg-item__image--reference';
+    refDiv.style.opacity = '0';
+    refDiv.style.transform = 'rotateX(' + (-parentRot.rotateX) + 'deg) rotateY(' + (-parentRot.rotateY) + 'deg)';
+    parent.appendChild(refDiv);
+    void refDiv.offsetHeight;
+
+    var tileR = refDiv.getBoundingClientRect();
+    var mainR = this.main.getBoundingClientRect();
+    var frameR = this.frame.getBoundingClientRect();
+
+    if (!mainR || !frameR || tileR.width <= 0 || tileR.height <= 0) {
+      this.opening = false; this.focusedEl = null; parent.removeChild(refDiv); this._unlockScroll();
+      return;
+    }
+
+    this.originalTilePosition = { left: tileR.left, top: tileR.top, width: tileR.width, height: tileR.height };
+    imgWrap.style.visibility = 'hidden';
+    imgWrap.style.zIndex = 0;
+
+    var overlay = document.createElement('div');
+    overlay.className = 'dg-enlarge';
+    overlay.style.position = 'absolute';
+    overlay.style.left = (frameR.left - mainR.left) + 'px';
+    overlay.style.top = (frameR.top - mainR.top) + 'px';
+    overlay.style.width = frameR.width + 'px';
+    overlay.style.height = frameR.height + 'px';
+    overlay.style.opacity = '0';
+    overlay.style.zIndex = '30';
+    overlay.style.transformOrigin = 'top left';
+    overlay.style.transition = 'transform ' + this.enlargeTransitionMs + 'ms ease, opacity ' + this.enlargeTransitionMs + 'ms ease';
+
+    var rawSrc = parent.dataset.src || '';
+    var img = document.createElement('img');
+    img.src = rawSrc;
+    overlay.appendChild(img);
+
+    var capWrap = document.createElement('div');
+    capWrap.className = 'dg-caption';
+    var currentCaption = getCaption(rawSrc, parent.querySelector('img') ? parent.querySelector('img').alt : '');
+    if (isEditMode()) {
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'dg-caption-input';
+      input.placeholder = 'Legenda desta foto...';
+      input.value = currentCaption;
+      input.addEventListener('click', function (e) { e.stopPropagation(); });
+      var saveTimer = null;
+      input.addEventListener('input', function () {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(function () {
+          setCaption(rawSrc, input.value);
+          badge.textContent = 'salvo ✓';
+          badge.style.opacity = '1';
+          setTimeout(function () { badge.style.opacity = '0'; }, 900);
+        }, 300);
+      });
+      var badge = document.createElement('span');
+      badge.className = 'dg-caption-saved';
+      badge.textContent = 'salvo ✓';
+      badge.style.opacity = '0';
+      capWrap.appendChild(input);
+      capWrap.appendChild(badge);
+    } else if (currentCaption) {
+      var span = document.createElement('span');
+      span.className = 'dg-caption-text';
+      span.textContent = currentCaption;
+      capWrap.appendChild(span);
+    }
+    overlay.appendChild(capWrap);
+
+    this.viewer.appendChild(overlay);
+
+    var tx0 = tileR.left - frameR.left;
+    var ty0 = tileR.top - frameR.top;
+    var sx0 = tileR.width / frameR.width;
+    var sy0 = tileR.height / frameR.height;
+    var validSx0 = isFinite(sx0) && sx0 > 0 ? sx0 : 1;
+    var validSy0 = isFinite(sy0) && sy0 > 0 ? sy0 : 1;
+    overlay.style.transform = 'translate(' + tx0 + 'px, ' + ty0 + 'px) scale(' + validSx0 + ', ' + validSy0 + ')';
+
+    setTimeout(function () {
+      if (!overlay.parentElement) return;
+      overlay.style.opacity = '1';
+      overlay.style.transform = 'translate(0px, 0px) scale(1, 1)';
+      self.root.setAttribute('data-enlarging', 'true');
+    }, 16);
+
+    var wantsResize = this.openedImageWidth || this.openedImageHeight;
+    if (wantsResize) {
+      var onFirstEnd = function (ev) {
+        if (ev.propertyName !== 'transform') return;
+        overlay.removeEventListener('transitionend', onFirstEnd);
+        var prevTransition = overlay.style.transition;
+        overlay.style.transition = 'none';
+        var tempWidth = self.openedImageWidth || (frameR.width + 'px');
+        var tempHeight = self.openedImageHeight || (frameR.height + 'px');
+        overlay.style.width = tempWidth;
+        overlay.style.height = tempHeight;
+        var newRect = overlay.getBoundingClientRect();
+        overlay.style.width = frameR.width + 'px';
+        overlay.style.height = frameR.height + 'px';
+        void overlay.offsetWidth;
+        overlay.style.transition = 'left ' + self.enlargeTransitionMs + 'ms ease, top ' + self.enlargeTransitionMs + 'ms ease, width ' + self.enlargeTransitionMs + 'ms ease, height ' + self.enlargeTransitionMs + 'ms ease';
+        var centeredLeft = frameR.left - mainR.left + (frameR.width - newRect.width) / 2;
+        var centeredTop = frameR.top - mainR.top + (frameR.height - newRect.height) / 2;
+        requestAnimationFrame(function () {
+          overlay.style.left = centeredLeft + 'px';
+          overlay.style.top = centeredTop + 'px';
+          overlay.style.width = tempWidth;
+          overlay.style.height = tempHeight;
+        });
+        var cleanupSecond = function () {
+          overlay.removeEventListener('transitionend', cleanupSecond);
+          overlay.style.transition = prevTransition;
+          if (isEditMode()) {
+            var inp = overlay.querySelector('.dg-caption-input');
+            if (inp) inp.focus();
+          }
+        };
+        overlay.addEventListener('transitionend', cleanupSecond, { once: true });
+      };
+      overlay.addEventListener('transitionend', onFirstEnd);
+    }
+  };
+
+  DomeGallery.prototype._close = function () {
+    var self = this;
+    if (performance.now() - this.openStartedAt < 250) return;
+    var el = this.focusedEl;
+    if (!el) return;
+    var parent = el.parentElement;
+    var overlay = this.viewer.querySelector('.dg-enlarge');
+    if (!overlay) return;
+    var refDiv = parent.querySelector('.dg-item__image--reference');
+    var originalPos = this.originalTilePosition;
+
+    if (!originalPos) {
+      overlay.remove();
+      if (refDiv) refDiv.remove();
+      parent.style.setProperty('--dg-rot-y-delta', '0deg');
+      parent.style.setProperty('--dg-rot-x-delta', '0deg');
+      el.style.visibility = ''; el.style.zIndex = 0;
+      this.focusedEl = null;
+      this.root.removeAttribute('data-enlarging');
+      this.opening = false;
+      this._unlockScroll();
+      return;
+    }
+
+    var currentRect = overlay.getBoundingClientRect();
+    var rootRect = this.root.getBoundingClientRect();
+    var originalPosRelativeToRoot = {
+      left: originalPos.left - rootRect.left, top: originalPos.top - rootRect.top,
+      width: originalPos.width, height: originalPos.height
+    };
+    var overlayRelativeToRoot = {
+      left: currentRect.left - rootRect.left, top: currentRect.top - rootRect.top,
+      width: currentRect.width, height: currentRect.height
+    };
+
+    var animatingOverlay = document.createElement('div');
+    animatingOverlay.className = 'dg-enlarge-closing';
+    animatingOverlay.style.cssText = 'position:absolute;left:' + overlayRelativeToRoot.left + 'px;top:' + overlayRelativeToRoot.top + 'px;width:' + overlayRelativeToRoot.width + 'px;height:' + overlayRelativeToRoot.height + 'px;z-index:9999;border-radius:var(--dg-enlarge-radius,32px);overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:all ' + this.enlargeTransitionMs + 'ms ease-out;pointer-events:none;margin:0;transform:none;';
+    var originalImg = overlay.querySelector('img');
+    if (originalImg) {
+      var img = originalImg.cloneNode();
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      animatingOverlay.appendChild(img);
+    }
+    overlay.remove();
+    this.root.appendChild(animatingOverlay);
+    void animatingOverlay.getBoundingClientRect();
+    requestAnimationFrame(function () {
+      animatingOverlay.style.left = originalPosRelativeToRoot.left + 'px';
+      animatingOverlay.style.top = originalPosRelativeToRoot.top + 'px';
+      animatingOverlay.style.width = originalPosRelativeToRoot.width + 'px';
+      animatingOverlay.style.height = originalPosRelativeToRoot.height + 'px';
+      animatingOverlay.style.opacity = '0';
+    });
+
+    var cleanup = function () {
+      animatingOverlay.remove();
+      self.originalTilePosition = null;
+      if (refDiv) refDiv.remove();
+      parent.style.transition = 'none';
+      el.style.transition = 'none';
+      parent.style.setProperty('--dg-rot-y-delta', '0deg');
+      parent.style.setProperty('--dg-rot-x-delta', '0deg');
+      requestAnimationFrame(function () {
+        el.style.visibility = '';
+        el.style.opacity = '0';
+        el.style.zIndex = 0;
+        self.focusedEl = null;
+        self.root.removeAttribute('data-enlarging');
+        requestAnimationFrame(function () {
+          parent.style.transition = '';
+          el.style.transition = 'opacity 300ms ease-out';
+          requestAnimationFrame(function () {
+            el.style.opacity = '1';
+            setTimeout(function () {
+              el.style.transition = '';
+              el.style.opacity = '';
+              self.opening = false;
+              if (!self.dragging && self.root.getAttribute('data-enlarging') !== 'true') {
+                document.body.classList.remove('dg-scroll-lock');
+              }
+            }, 300);
+          });
+        });
+      });
+    };
+    animatingOverlay.addEventListener('transitionend', cleanup, { once: true });
+  };
+
+  var DG_MEDIA_PAIRS = [["O3136705493481646406087379320881","IMG_4045.HEIC"],["D3143875544047196194211552100401","_MG_4588.JPG"],["Y3143875544065642938285261652017","_MG_4712.JPG"],["E3143875544084089682358971203633","ADASZZ-22-de-27.JPG"],["R3143875544102536426432680755249","ADASZZ-24-de-27.JPEG"],["O3143875544120983170506390306865","ADASZZ-25-de-27.JPEG"],["J3143875544139429914580099858481","LUANGOMESFT-7.JPG"],["G3143875544157876658653809410097","LUANGOMESFT-75.JPG"],["F3143875544176323402727518961713","LUANGOMESFT-78.JPG"],["P3143875544194770146801228513329","MORTACRIA_2.JPG"],["Z3143875544213216890874938064945","MORTACRIA_128.JPG"],["D3143875544231663634948647616561","0b9187f8-b88e-44de-956d-e19711b2ffbd.JPG"],["P3143875544250110379022357168177","0d62a420-0224-43a8-9e71-4aa56f22d8a0.JPG"],["S3143875544268557123096066719793","1a0697fd-12a0-403c-8989-313169510722.JPG"],["W3143875544287003867169776271409","01C83C96-78E9-4198-AF51-04F4150D352F.JPG"],["N3143875544305450611243485823025","1C700249-16CD-485B-9A5C-EB461EB9FB3A.JPG"],["Y3143875544323897355317195374641","01E118C6-2548-451A-BDE2-A6867BBF2FB8.JPG"],["G3143875544342344099390904926257","2FAAE3EB-B554-47E1-B90D-C9DA484CBE95.JPG"],["O3143875544360790843464614477873","2for1GoldenKlub-001.JPEG"],["W3143875544379237587538324029489","3.JPG"],["R3143875544397684331612033581105","4a45509a-f28b-4f1a-bceb-029990962403.JPG"],["B3143875544416131075685743132721","5b637cd5-fd27-435f-bf4d-8bc5ff3c2eee.JPG"],["J3143875544434577819759452684337","6BCCAF2A-C01B-4F95-818F-DBF4531845D7.JPG"],["P3143875544453024563833162235953","6c85c55e-9ad5-4d55-9cb3-4f4b4d0def4f.JPG"],["X3143875544471471307906871787569","8b3b592a-77aa-41ac-9cef-b932dc538527.JPG"],["E3143875544489918051980581339185","8c3c9627-e359-4b49-804c-b1b157425509.JPG"],["I3143875544508364796054290890801","8c62b0c2-37f4-431e-bb3c-d49b7c6c2906.JPG"],["L3143875544526811540128000442417","8CA71F7C-0DB5-43E8-8AA4-FD3D9870F4E9.JPG"],["X3143875544545258284201709994033","8d5c7243-219f-4f14-8052-dd7ad54386cf.JPG"],["B3143875544563705028275419545649","9B833131-DCDC-41B3-AE1F-CDCC3F9809F9.JPG"],["B3143875544582151772349129097265","12ea6ccb-b9e7-4b8a-af33-aba70e891664.JPG"],["R3143875544600598516422838648881","24e3b915-1487-4c03-850d-2c4129ab8e95.JPG"],["Q3143875544619045260496548200497","27CC9B1F-222F-405C-B477-B794EE4D638D.JPG"],["D3143875544637492004570257752113","38b744b2-bed7-4961-946c-ea05d4429f90.JPG"],["I3143875544655938748643967303729","40BC1307-DB9F-4949-92D0-F68059DA5B05.JPG"],["T3143875544674385492717676855345","46cfd97f-4463-4ff0-b434-bf74852da0f1.JPG"],["C3143875544692832236791386406961","51da55a3-bac8-4923-b65d-68865f13884d.JPG"],["V3143875544711278980865095958577","72cfa99e-f95b-4d13-bebc-c21fec83be0e.JPG"],["A3143875544748172469012515061809","74df10b5-867a-497a-a3e6-8d558d3d0e78.JPG"],["C3143875544766619213086224613425","75AEA47D-F612-4F73-A95C-1D884931AEAA.JPG"],["E3143875544785065957159934165041","84b724ea-345e-4e12-b1ae-91bce2a31a12.JPG"],["E3143875544803512701233643716657","87d1bee8-a9bf-4f5d-821e-9359a4b99e21.JPG"],["L3143875544821959445307353268273","97BB4E5E-1035-4D14-BD27-1BBF124C87F0.JPG"],["A3143875544840406189381062819889","215da45d-7301-40fb-847b-1ba8378b389b.JPG"],["L3143875544858852933454772371505","229f62e4-2d98-4ff4-83f5-20f416bb464f.JPG"],["J3143875544877299677528481923121","239be95c-5d6a-4ae5-a708-2f1559ab46ba.JPG"],["C3143875544895746421602191474737","331F5352-517B-4A60-89E2-1B616DE02B0F.JPG"],["Y3143875544914193165675901026353","468cc6ff-01fe-48cc-97a6-f7484dce2a80.JPG"],["R3143875544932639909749610577969","0765d50f-2369-4efd-8cf3-5416b9744010.JPG"],["R3143875544951086653823320129585","940d547c-0070-4728-a5d2-a6e31ac34e30.JPG"],["A3143875544969533397897029681201","940f9416-b13c-4785-9555-ad3f6026af65.JPG"],["M3143875544987980141970739232817","986A460E-17EF-4041-9C06-0D1DFDE2BEEC.JPG"],["A3143875545006426886044448784433","1308C5E8-0E12-4426-A7F1-8270D1F3AFFF.JPG"],["H3143875545024873630118158336049","2899c865-4724-4037-b88f-20d05ad42484.JPG"],["G3143875545043320374191867887665","2946b05e-4ae1-4d54-a796-67d45f2a07b1.JPG"],["O3143875545061767118265577439281","3055a252-615b-4269-8233-4acac5a0bf9d.JPG"],["R3143875545080213862339286990897","3554.mp4"],["X3143875545098660606412996542513","04073abc-4798-4016-b675-69ed03bc73ea.JPG"],["R3143875545117107350486706094129","4164dbdf-1144-452b-b2a0-07a63c121b77.JPG"],["E3143875545135554094560415645745","05155D47-BF22-46F1-ACCB-57F941450EE4.JPG"],["P3143875545154000838634125197361","07710a98-89f1-49c8-b6f1-e66c61557eee.JPG"],["O3143875545172447582707834748977","22564f2c-c751-4d98-b5e4-89c9a58d8c91.JPG"],["Q3143875545190894326781544300593","82608b6c-c7c1-4bbc-95c8-0955ce565d74.JPG"],["F3143875545209341070855253852209","94081b1a-69ce-48d1-9f7b-ff55bf1830e7.JPG"],["E3143875545227787814928963403825","248200f3-ecec-4d6b-8f43-14a7087acdff.JPG"],["Q3143875545246234559002672955441","704927e6-d6b9-4e18-9e8d-c67b27ed3deb.JPG"],["S3143875545264681303076382507057","18122024-_MG_8762.JPG"],["T3143875545283128047150092058673","67911828-af5f-498c-87f4-754a37f08a85.JPG"],["F3143875545301574791223801610289","88799331-DB27-47C2-8121-1A2FAA2E6601.JPG"],["R3143875545320021535297511161905","a21fd28c-e794-45d4-be9e-26441b9190e6.JPG"],["T3143875545338468279371220713521","a061e106-be73-4a24-9d68-600df6bf32ab.JPG"],["I3143875545356915023444930265137","a86e0219-03da-41dc-af28-2569e0bec74e.JPG"],["H3143875545375361767518639816753","a7172c13-9c50-4d25-9ebc-3a8a4feb6673.JPG"],["V3143875545393808511592349368369","a8276b7c-565e-4511-9548-ed70d8817fb8.JPG"],["A3143875545412255255666058919985","a8978eb7-1eb5-4369-8b06-241411cd037a.JPG"],["Q3143875545430701999739768471601","af2985c9-7859-4786-9299-7d64f1866d59.JPG"],["U3143875545449148743813478023217","Audi-Q3-506.JPEG"],["D3143875545467595487887187574833","B37FA54D-E840-4C15-8300-2FE459C47964.JPG"],["Z3143875545486042231960897126449","B4500CDD-B593-40F6-BAA5-F9E334BE1D2B.JPG"],["I3143875545504488976034606678065","b642294b-48b5-4f07-ad82-b158949cad65.JPG"],["H3143875545522935720108316229681","C4E85400-4BD6-47EE-B976-105BDC6F412B.JPG"],["C3143875545541382464182025781297","C6DDC743-CA77-42C6-A471-C311338DC4AF.JPG"],["F3143875545559829208255735332913","C9D25D7A-D620-4FDD-BC61-F05BAC77B569.JPG"],["B3143875545578275952329444884529","c38fcf5f-0e95-426e-b331-157e6b267859.JPG"],["R3143875545596722696403154436145","c44ca073-9c88-4657-a77b-c13f05f01935.JPG"],["F3143875545615169440476863987761","d4cce833-bab8-4f4b-af02-f504a8d4503c.JPG"],["J3143875545633616184550573539377","d8cb6e84-2a71-4db4-94a6-070e1eaf6d2b.JPG"],["X3143875545652062928624283090993","D011C8C4-A701-43D7-8CAB-FBC36B73FBA8.JPG"],["W3143875545670509672697992642609","d07800a6-8d59-4e28-9f56-8f0942ad897d.JPG"],["K3143875545688956416771702194225","ddcd0ad4-4a65-4042-a921-58c8d731899f.JPG"],["F3143875545707403160845411745841","ddeb8627-e42e-4a82-81e6-da55a2bc1cf2.JPG"],["S3143875545725849904919121297457","DSC_0141.JPG"],["C3143875545744296648992830849073","DSC00097-2.JPG"],["C3143875545762743393066540400689","DSC00243-3.JPG"],["S3143875545781190137140249952305","DSC00377.JPG"],["L3143875545799636881213959503921","DSC00500.JPG"],["O3143875545818083625287669055537","DSC00707.JPG"],["J3143875545836530369361378607153","DSC00743.JPG"],["H3143875545854977113435088158769","DSC00883.JPG"],["F3143875545873423857508797710385","DSC00896.JPG"],["V3143875545891870601582507262001","DSC00932.JPG"],["A3143875545910317345656216813617","DSC01917.JPG"],["B3143875545928764089729926365233","DSC02207-Enhanced-NR-3.JPG"],["N3143875545947210833803635916849","DSC04453.JPG"],["X3143875545965657577877345468465","DSC04691-2.JPG"],["V3143875545984104321951055020081","DSC05176.JPG"],["C3143875546020997810098474123313","DSC05873.JPEG"],["B3143875546039444554172183674929","DSC06297-3.JPG"],["D3143875546057891298245893226545","DSC07301.JPG"],["A3143875546076338042319602778161","DSC07302.JPG"],["X3143875546094784786393312329777","DSC07317.JPG"],["O3143875546113231530467021881393","DSC08060-2.JPG"],["Y3143875546131678274540731433009","DSC08662.JPG"],["P3143875546150125018614440984625","DSC09204.JPG"],["E3143875546168571762688150536241","DSC09207.JPG"],["L3143875546187018506761860087857","DSC09219.JPG"],["V3143875546205465250835569639473","DSC09511.JPG"],["X3143875546223911994909279191089","DSC09622.JPG"],["Z3143875546242358738982988742705","DSC09677.JPG"],["J3143875546260805483056698294321","DSC09838-2.JPG"],["H3143875546279252227130407845937","DSC09931.JPG"],["A3143875546297698971204117397553","DSCF7652.JPG"],["U3143875546316145715277826949169","DSCF7655.JPG"],["X3143875546334592459351536500785","DSCF7657.JPG"],["X3143875546353039203425246052401","DSCF9811.JPG"],["H3143875546371485947498955604017","e34f56e9-040d-41f2-9d34-2e3443cbb606.JPG"],["O3143875546389932691572665155633","ECE939B1-8CF5-4AFB-BEC8-730F44DD8C39.JPG"],["H3143875546426826179720084258865","F8D3A240-6F5F-4B2F-9003-5C281BDEB2F5.JPG"],["V3143875546445272923793793810481","f97c9557-f07b-42a7-a336-91a45d7ce8d2.JPG"],["L3143875546482166411941212913713","IMG_0003.HEIC"],["P3143875546500613156014922465329","IMG_0194.HEIC"],["J3143875546519059900088632016945","IMG_0202.HEIC"],["P3143875546537506644162341568561","IMG_0286.HEIC"],["R3143875546555953388236051120177","IMG_0298.HEIC"],["Y3143875546574400132309760671793","IMG_0322.HEIC"],["A3143875546592846876383470223409","IMG_0389.PNG"],["H3143875546611293620457179775025","IMG_0434.heic"],["J3143875546629740364530889326641","IMG_0595.HEIC"],["B3143875546648187108604598878257","IMG_0597.HEIC"],["U3143875546666633852678308429873","IMG_0643.heic"],["M3143875546685080596752017981489","IMG_0804.JPG"],["L3143875546703527340825727533105","IMG_0820.HEIC"],["A3143875546721974084899437084721","IMG_0821.HEIC"],["P3143875546740420828973146636337","IMG_1001.JPEG"],["O3143875546758867573046856187953","IMG_1031.HEIC"],["N3143875546777314317120565739569","IMG_1186.JPEG"],["L3143875546795761061194275291185","IMG_1197.HEIC"],["G3143875546814207805267984842801","IMG_1262.HEIC"],["E3143875546832654549341694394417","IMG_1285.HEIC"],["A3143875546851101293415403946033","IMG_1426.HEIC"],["E3143875546869548037489113497649","IMG_1632.HEIC"],["D3143875546887994781562823049265","IMG_1668.JPG"],["C3143875546906441525636532600881","IMG_1741.JPG"],["X3143875546924888269710242152497","IMG_1751.jpg"],["L3143875546943335013783951704113","IMG_1850.HEIC"],["U3143875546961781757857661255729","IMG_1973.jpg"],["E3143875546980228501931370807345","IMG_2031.PNG"],["L3143875547017121990078789910577","IMG_2179.HEIC"],["Y3143875547035568734152499462193","IMG_2234.PNG"],["S3143875547072462222299918565425","IMG_2389.JPG"],["D3143875547090908966373628117041","IMG_2489.HEIC"],["M3143875547109355710447337668657","IMG_2490.HEIC"],["W3143875547127802454521047220273","IMG_2496.HEIC"],["O3143875547146249198594756771889","IMG_2521.HEIC"],["P3143875547164695942668466323505","IMG_2539.HEIC"],["M3143875547183142686742175875121","IMG_2714.PNG"],["R3143875547201589430815885426737","IMG_2729.HEIC"],["D3143875547220036174889594978353","IMG_2747.JPG"],["U3143875547238482918963304529969","IMG_2820.JPG"],["P3143875547256929663037014081585","IMG_2831.JPG"],["B3143875547275376407110723633201","IMG_2849.HEIC"],["W3143875547293823151184433184817","IMG_2887.HEIC"],["Q3143875547312269895258142736433","IMG_2947.HEIC"],["Q3143875547330716639331852288049","IMG_2949.JPG"],["L3143875547349163383405561839665","IMG_2964.HEIC"],["K3143875547367610127479271391281","IMG_2982.HEIC"],["Q3143875547386056871552980942897","IMG_3076.PNG"],["U3143875547404503615626690494513","IMG_3094.HEIC"],["D3143875547422950359700400046129","IMG_3098.HEIC"],["T3143875547441397103774109597745","IMG_3213.JPG"],["D3143875547459843847847819149361","IMG_3235.HEIC"],["D3143875547478290591921528700977","IMG_3285.HEIC"],["M3143875547496737335995238252593","IMG_3415.HEIC"],["F3143875547533630824142657355825","IMG_3572.HEIC"],["H3143875547552077568216366907441","IMG_3585.HEIC"],["H3143875547570524312290076459057","IMG_3602.PNG"],["H3143875547588971056363786010673","IMG_3676.JPG"],["V3143875547607417800437495562289","IMG_3748.HEIC"],["L3143875547625864544511205113905","IMG_3753.HEIC"],["X3143875547644311288584914665521","IMG_3784.HEIC"],["V3143875547662758032658624217137","IMG_3816.PNG"],["A3143875547681204776732333768753","IMG_3914.JPG"],["T3143875547699651520806043320369","IMG_3919.PNG"],["A3143875547718098264879752871985","IMG_3941.JPG"],["V3143875547736545008953462423601","IMG_3964.HEIC"],["W3143875547754991753027171975217","IMG_3988.JPG"],["J3143875547773438497100881526833","IMG_3994.JPG"],["E3143875547791885241174591078449","IMG_4017.JPG"],["L3143875547810331985248300630065","IMG_4093.HEIC"],["M3143875547828778729322010181681","IMG_4125.jpg"],["I3143875547847225473395719733297","IMG_4126.HEIC"],["L3143875547865672217469429284913","IMG_4132.HEIC"],["D3143875547884118961543138836529","IMG_4135.HEIC"],["J3143875547902565705616848388145","IMG_4139.HEIC"],["Q3143875547921012449690557939761","IMG_4140.HEIC"],["X3143875547939459193764267491377","IMG_4248.HEIC"],["F3143875547957905937837977042993","IMG_4264.HEIC"],["V3143875547976352681911686594609","IMG_4269.HEIC"],["M3143875547994799425985396146225","IMG_4271.HEIC"],["J3143875548013246170059105697841","IMG_4272.jpg"],["U3143875548031692914132815249457","IMG_4347.PNG"],["E3143875548050139658206524801073","IMG_4420.PNG"],["O3143875548068586402280234352689","IMG_4438.PNG"],["F3143875548087033146353943904305","IMG_4451.PNG"],["V3143875548105479890427653455921","IMG_4539.HEIC"],["Y3143875548123926634501363007537","IMG_4540.HEIC"],["Y3143875548142373378575072559153","IMG_4558.HEIC"],["O3143875548160820122648782110769","IMG_4630.HEIC"],["G3143875548179266866722491662385","IMG_4651.JPEG"],["Q3143875548197713610796201214001","IMG_4659.HEIC"],["W3143875548216160354869910765617","IMG_4683.JPG"],["Y3143875548234607098943620317233","IMG_4756.HEIC"],["M3143875548253053843017329868849","IMG_4769.PNG"],["R3143875548271500587091039420465","IMG_4876.HEIC"],["Y3143875548289947331164748972081","IMG_4985.HEIC"],["L3143875548308394075238458523697","IMG_5050.HEIC"],["J3143875548345287563385877626929","IMG_5074.HEIC"],["G3143875548363734307459587178545","IMG_5399.HEIC"],["T3143875548382181051533296730161","IMG_5554.HEIC"],["U3143875548400627795607006281777","IMG_5568.HEIC"],["S3143875548419074539680715833393","IMG_5707.HEIC"],["X3143875548437521283754425385009","IMG_5895.HEIC"],["V3143875548455968027828134936625","IMG_5910-2.HEIC"],["A3143875548474414771901844488241","IMG_5910.HEIC"],["J3143875548492861515975554039857","IMG_5983.JPG"],["A3143875548511308260049263591473","IMG_5990.HEIC"],["H3143875548529755004122973143089","IMG_6136.HEIC"],["T3143875548548201748196682694705","IMG_6140.HEIC"],["Y3143875548566648492270392246321","IMG_6173.JPG"],["V3143875548585095236344101797937","IMG_6174.JPG"],["V3143875548603541980417811349553","IMG_6176.HEIC"],["V3143875548621988724491520901169","IMG_6300.HEIC"],["R3143875548640435468565230452785","IMG_6433.JPG"],["P3143875548658882212638940004401","IMG_6437.HEIC"],["A3143875548677328956712649556017","IMG_6444.PNG"],["H3143875548695775700786359107633","IMG_6553.HEIC"],["F3143875548714222444860068659249","IMG_65641.JPG"],["S3143875548732669188933778210865","IMG_6927.JPG"],["B3143875548751115933007487762481","IMG_6949.HEIC"],["J3143875548769562677081197314097","IMG_6981.JPEG"],["B3143875548788009421154906865713","IMG_7034.PNG"],["E3143875548806456165228616417329","IMG_7055.JPG"],["S3143875548824902909302325968945","IMG_7068.HEIC"],["O3143875548843349653376035520561","IMG_7169.HEIC"],["Q3143875548861796397449745072177","IMG_7182.PNG"],["Y3143875548880243141523454623793","IMG_7335.HEIC"],["J3143875548898689885597164175409","IMG_7339.PNG"],["Z3143875548917136629670873727025","IMG_7402.HEIC"],["Q3143875548935583373744583278641","IMG_7508.HEIC"],["X3143875548954030117818292830257","IMG_7578.JPG"],["O3143875548972476861892002381873","IMG_7623.HEIC"],["B3143875548990923605965711933489","IMG_7769.HEIC"],["N3143875549009370350039421485105","IMG_7813.HEIC"],["U3143875549027817094113131036721","IMG_7817.HEIC"],["V3143875549046263838186840588337","IMG_7860.HEIC"],["E3143875549064710582260550139953","IMG_8217.HEIC"],["B3143875549083157326334259691569","IMG_8287.PNG"],["M3143875549101604070407969243185","IMG_8313.HEIC"],["S3143875549120050814481678794801","IMG_8321.jpg"],["S3143875549138497558555388346417","IMG_8376.HEIC"],["X3143875549156944302629097898033","IMG_8573.HEIC"],["U3143875549175391046702807449649","IMG_8656.HEIC"],["S3143875549193837790776517001265","IMG_8691.HEIC"],["L3143875549212284534850226552881","IMG_8703.HEIC"],["F3143875549230731278923936104497","IMG_8755.HEIC"],["W3143875549249178022997645656113","IMG_8866.PNG"],["I3143875549267624767071355207729","IMG_8930.HEIC"],["J3143875549286071511145064759345","IMG_8958.JPG"],["C3143875549304518255218774310961","IMG_9036.HEIC"],["M3143875549322964999292483862577","IMG_9046.HEIC"],["X3143875549341411743366193414193","IMG_9050.PNG"],["K3143875549359858487439902965809","IMG_9055.JPG"],["Z3143875549378305231513612517425","IMG_9268.HEIC"],["J3143875549396751975587322069041","IMG_9422.HEIC"],["K3143875549415198719661031620657","IMG_9557.HEIC"],["N3143875549433645463734741172273","IMG_9561.JPG"],["U3143875549452092207808450723889","IMG_9584.HEIC"],["H3143875549470538951882160275505","IMG_9713.JPG"],["Z3143875549488985695955869827121","IMG_9778.JPG"],["D3143875549507432440029579378737","IMG_9932.HEIC"],["I3143875549525879184103288930353","IMG_9955.heic"],["I3143875549544325928176998481969","JTC04098.JPG"],["Q3143875549581219416324417585201","Kyanclicktrotta-205.JPEG"],["M3143875549618112904471836688433","P1051093.JPG"],["V3143875549655006392619255791665","QWD.JPG"],["S3143875549673453136692965343281","Scan23920.JPG"],["V3143875549691899880766674894897","Scan146153.JPEG"],["B3143875549710346624840384446513","Scan146167.JPEG"],["X3143875549728793368914093998129","umnro.JPG"],["F3143875549747240112987803549745","73ff8e08-fa39-494b-9ebe-a8f5fb492deb.JPG"],["Z3143875549765686857061513101361","85ce535b-60cc-42e8-853e-6ba02457124e.JPG"],["A3143875549784133601135222652977","ce7e9dbd-d2c3-474a-9964-898a232821a9.JPG"],["B3143875549802580345208932204593","dd011588-be95-45a0-b941-53b923cdcca9.JPG"],["D3143875549821027089282641756209","f7b429e6-2bdd-457d-b3cc-04cac286d4ff.JPG"],["I3143875549839473833356351307825","IMG_3517-Enhanced-NR.JPEG"],["K3143875549857920577430060859441","IMG_3532-Enhanced-NR.JPG"],["F3143875549876367321503770411057","IMG_3537.JPG"],["J3143875549894814065577479962673","IMG_3675-Enhanced-NR.JPEG"],["O3143875549913260809651189514289","IMG_3709.JPG"],["G3143875549931707553724899065905","IMG_4662.HEIC"],["Z3143875549950154297798608617521","IMG_4973.jpg"],["X3143875549968601041872318169137","IMG_5072.HEIC"],["W3143875549987047785946027720753","Kyanclicktrotta-68.JPEG"],["M3143875550005494530019737272369","LNS01778.JPG"],["F3143875550023941274093446823985","Por_h.agst_14.JPEG"],["Q3143875550042388018167156375601","Por_h.agst_17.JPEG"],["R3143875550060834762240865927217","Por_h.agst_18.JPEG"],["O3143875550079281506314575478833","Por_h.agst_31.JPEG"]];
+
+  function buildImagesFromPairs(pairs) {
+    return pairs.map(function (p) {
+      return { src: 'https://freight.cargo.site/w/1200/q/80/i/' + p[0] + '/' + p[1], alt: '' };
+    });
+  }
+
+  function harvestImagesAndMount() {
+    if (document.getElementById('dg-root')) return;
+    var foot = document.querySelector('.ar-foot');
+    if (!foot) return;
+    var pairs = DG_MEDIA_PAIRS;
+    if (!pairs || !pairs.length) return;
+
+    var images = buildImagesFromPairs(pairs);
+
+    var root = document.createElement('div');
+    root.id = 'dg-root';
+    foot.parentNode.insertBefore(root, foot);
+
+    parentWindow.__dgInstance = new DomeGallery(root, {
+      images: images,
+      fit: 0.75,
+      minRadius: 800,
+      maxVerticalRotationDeg: 9,
+      grayscale: false
+    });
+  }
+
+  function tryMount(attemptsLeft) {
+    harvestImagesAndMount();
+    if (!document.getElementById('dg-root') && attemptsLeft > 0) {
+      setTimeout(function () { tryMount(attemptsLeft - 1); }, 400);
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { tryMount(20); });
+  } else {
+    tryMount(20);
+  }
+})();
+</script>
