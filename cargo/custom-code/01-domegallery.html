@@ -128,6 +128,7 @@
     this.imageBorderRadius = opts.imageBorderRadius || '30px';
     this.openedImageBorderRadius = opts.openedImageBorderRadius || '30px';
     this.grayscale = !!opts.grayscale;
+    this.autoRotateSpeed = opts.autoRotateSpeed != null ? opts.autoRotateSpeed : 0;
 
     this.rotation = { x: 0, y: 0 };
     this.startRot = { x: 0, y: 0 };
@@ -146,6 +147,7 @@
 
     this._build();
     this._bindEvents();
+    this._startAutoRotation();
   }
 
   DomeGallery.prototype._build = function () {
@@ -350,6 +352,32 @@
     }
     this._stopInertia();
     this.inertiaRAF = requestAnimationFrame(step);
+  };
+
+  DomeGallery.prototype._startAutoRotation = function () {
+    var self = this;
+    if (!this.autoRotateSpeed) return;
+    if (parentWindow.matchMedia && parentWindow.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var previousTime = 0;
+    function step(time) {
+      if (!document.documentElement.contains(self.root)) return;
+
+      var delta = previousTime ? Math.min(time - previousTime, 48) : 0;
+      previousTime = time;
+      var isViewingImage = self.root.getAttribute('data-enlarging') === 'true';
+
+      if (!self.dragging && !self.opening && !self.inertiaRAF && !isViewingImage) {
+        self.rotation.y = wrapAngleSigned(
+          self.rotation.y + self.autoRotateSpeed * delta
+        );
+        self._applyTransform(self.rotation.x, self.rotation.y);
+      }
+
+      self.autoRotateRAF = requestAnimationFrame(step);
+    }
+
+    this.autoRotateRAF = requestAnimationFrame(step);
   };
 
   DomeGallery.prototype._lockScroll = function () {
@@ -708,6 +736,8 @@
       fit: 0.75,
       minRadius: 800,
       maxVerticalRotationDeg: 9,
+      overlayBlurColor: '#0b0b0a',
+      autoRotateSpeed: -0.0025,
       grayscale: false
     });
   }

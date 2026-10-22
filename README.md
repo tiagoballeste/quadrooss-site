@@ -3,6 +3,16 @@
 Exportação completa do site **https://852526.cargo.site**, feito no [Cargo](https://cargo.site) (Cargo 3).
 Gerada em 07/10/2026 para passar o projeto para desenvolvimento.
 
+## Reconstrução independente
+
+A nova aplicação está em [`web/`](web/), construída em Next.js/React. As pastas exportadas do Cargo continuam preservadas como fonte de conteúdo e referência durante a migração.
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
 > **Importante para quem for desenvolver:** o Cargo é uma plataforma fechada, então não existe um "código-fonte" que roda sozinho fora dele. Este repositório traz **tudo o que dá para tirar do Cargo**: o conteúdo de cada página, o CSS, todo o código personalizado (JS/HTML), as imagens e um snapshot do HTML de cada página já renderizado. Com isso dá para recriar o site em qualquer stack (Next.js, Astro, HTML estático etc.) ou continuar editando no Cargo.
 
 ## Estrutura

@@ -1,0 +1,27 @@
+{
+  "name": "quadrooss-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "sync:work": "node scripts/sync-work-vimeo.mjs"
+  },
+  "dependencies": {
+    "@vimeo/player": "^2.30.4",
+    "gsap": "latest",
+    "lenis": "latest",
+    "motion": "^14.2.0",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "latest"
+  }
+}

@@ -91,6 +91,9 @@
   var mounted = false;
 
   function injectStyles() {
+    // The React build owns these rules in src/app/globals.css so they can share
+    // the same design tokens as the rest of the site.
+    return;
     if (document.getElementById('work-page-styles')) return;
     var styleEl = document.createElement('style');
     styleEl.id = 'work-page-styles';
@@ -100,20 +103,29 @@
 
   function buildRollChars(text) {
     var wrap = document.createDocumentFragment();
-    for (var i = 0; i < text.length; i++) {
-      var ch = text.charAt(i);
-      var outer = document.createElement('span');
-      outer.className = 'wk-roll-char';
-      outer.style.transitionDelay = (i * 18) + 'ms';
-      var front = document.createElement('span');
-      front.className = 'wk-rc-face wk-rc-front';
-      front.textContent = ch === ' ' ? '\u00a0' : ch;
-      var back = document.createElement('span');
-      back.className = 'wk-rc-face wk-rc-back';
-      back.textContent = ch === ' ' ? '\u00a0' : ch;
-      outer.appendChild(front);
-      outer.appendChild(back);
-      wrap.appendChild(outer);
+    var words = text.split(' ');
+    var charIndex = 0;
+    for (var w = 0; w < words.length; w++) {
+      var wordWrap = document.createElement('span');
+      wordWrap.className = 'wk-roll-word';
+      for (var i = 0; i < words[w].length; i++) {
+        var ch = words[w].charAt(i);
+        var outer = document.createElement('span');
+        outer.className = 'wk-roll-char';
+        outer.style.transitionDelay = (charIndex * 18) + 'ms';
+        var front = document.createElement('span');
+        front.className = 'wk-rc-face wk-rc-front';
+        front.textContent = ch;
+        var back = document.createElement('span');
+        back.className = 'wk-rc-face wk-rc-back';
+        back.textContent = ch;
+        outer.appendChild(front);
+        outer.appendChild(back);
+        wordWrap.appendChild(outer);
+        charIndex++;
+      }
+      wrap.appendChild(wordWrap);
+      if (w < words.length - 1) wrap.appendChild(document.createTextNode(' '));
     }
     return wrap;
   }
