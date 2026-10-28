@@ -16,6 +16,7 @@ type PageLoaderProps = {
 
 const MAX_SITE_BLUR = 20;
 const BLUR_START_PROGRESS = 0.58;
+const BLUR_END_PROGRESS = 0.82;
 const FALLBACK_TIMEOUT = 8000;
 
 export function PageLoader({ enabled }: PageLoaderProps) {
@@ -93,7 +94,11 @@ export function PageLoader({ enabled }: PageLoaderProps) {
     const progress = video.currentTime / video.duration;
     const revealProgress = Math.min(
       1,
-      Math.max(0, (progress - BLUR_START_PROGRESS) / (1 - BLUR_START_PROGRESS)),
+      Math.max(
+        0,
+        (progress - BLUR_START_PROGRESS) /
+          (BLUR_END_PROGRESS - BLUR_START_PROGRESS),
+      ),
     );
     const easedProgress = revealProgress * revealProgress * (3 - 2 * revealProgress);
     const blur = MAX_SITE_BLUR * (1 - easedProgress);

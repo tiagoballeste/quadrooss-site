@@ -526,7 +526,7 @@ a {
   gap: var(--space-7);
 }
 
-/* OptionWheel — values copied from the Cargo implementation */
+/* Responsive navigation overlay. */
 .ow-toggle {
   position: fixed;
   z-index: calc(var(--layer-overlay) + 1);
@@ -546,8 +546,8 @@ a {
 
 .ow-toggle__bars {
   position: relative;
-  width: 20px;
-  height: 13px;
+  width: 24px;
+  height: 17px;
 }
 
 .ow-toggle__bars span {
@@ -563,61 +563,74 @@ a {
 }
 
 .ow-toggle__bars span:nth-child(1) { top: 0; }
-.ow-toggle__bars span:nth-child(2) { top: 6px; }
-.ow-toggle__bars span:nth-child(3) { top: 12px; }
-.ow-toggle.is-open .ow-toggle__bars span:nth-child(1) { top: 6px; transform: rotate(45deg); }
+.ow-toggle__bars span:nth-child(2) { top: 8px; }
+.ow-toggle__bars span:nth-child(3) { top: 16px; }
+.ow-toggle.is-open .ow-toggle__bars span:nth-child(1) { top: 8px; transform: rotate(45deg); }
 .ow-toggle.is-open .ow-toggle__bars span:nth-child(2) { opacity: 0; }
-.ow-toggle.is-open .ow-toggle__bars span:nth-child(3) { top: 6px; transform: rotate(-45deg); }
+.ow-toggle.is-open .ow-toggle__bars span:nth-child(3) { top: 8px; transform: rotate(-45deg); }
 
 .ow-backdrop {
   position: fixed;
   z-index: var(--layer-overlay);
   inset: 0;
-  background: var(--color-overlay);
-  backdrop-filter: blur(6px);
+  visibility: hidden;
+  background: rgb(0 0 0 / 44%);
+  backdrop-filter: blur(48px) brightness(0.58) saturate(0.65);
+  -webkit-backdrop-filter: blur(48px) brightness(0.58) saturate(0.65);
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--duration-medium) var(--ease-standard);
+  transition:
+    opacity 420ms var(--ease-standard),
+    visibility 0s linear 420ms;
 }
 
 .ow-backdrop.is-open {
+  visibility: visible;
   opacity: 1;
   pointer-events: auto;
+  transition-delay: 0s;
 }
 
 .ow-root {
-  position: relative;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1rem, 2.35vh, 1.35rem);
   width: 100%;
   height: 100%;
   outline: none;
-  cursor: grab;
-  touch-action: none;
   user-select: none;
 }
 
 .ow-item {
-  position: absolute;
-  top: 50%;
-  left: clamp(76px, 7vw, 140px);
-  color: var(--color-text-primary);
-  font-size: clamp(1.45rem, 1.55vw, 1.9rem);
+  color: var(--ds-white);
+  font-size: clamp(1.45rem, 7vw, 1.75rem);
   font-weight: var(--font-weight-medium);
-  letter-spacing: var(--tracking-wide);
-  line-height: var(--leading-none);
+  letter-spacing: 0.075em;
+  line-height: 1.05;
+  text-align: center;
   text-transform: uppercase;
   white-space: nowrap;
-  transform-origin: left center;
+  opacity: 0;
+  transform: translateY(12px);
   transition:
-    transform 280ms var(--ease-standard),
-    opacity 280ms var(--ease-standard),
-    filter 280ms var(--ease-standard),
-    font-size 280ms var(--ease-standard);
+    opacity 360ms var(--ease-standard),
+    transform 460ms var(--ease-emphasized);
 }
 
-.ow-item--selected {
-  font-size: clamp(1.65rem, 1.75vw, 2.1rem);
-  font-weight: var(--font-weight-medium);
+.ow-backdrop.is-open .ow-item {
+  opacity: 1;
+  transform: translateY(0);
 }
+
+.ow-backdrop.is-open .ow-item:nth-child(1) { transition-delay: 80ms; }
+.ow-backdrop.is-open .ow-item:nth-child(2) { transition-delay: 115ms; }
+.ow-backdrop.is-open .ow-item:nth-child(3) { transition-delay: 150ms; }
+.ow-backdrop.is-open .ow-item:nth-child(4) { transition-delay: 185ms; }
+.ow-backdrop.is-open .ow-item:nth-child(5) { transition-delay: 220ms; }
 
 /* Client logo loop */
 .idx-clients {
@@ -2893,14 +2906,6 @@ a {
   .idx-stats { top: var(--space-20); right: var(--page-gutter); bottom: auto; }
   .idx-stats { font-size: var(--text-micro); }
   .idx-stats div { min-width: 132px; gap: calc(var(--space-4) + 2px); padding: 2px 0; }
-  .ow-item {
-    right: 54px;
-    left: auto;
-    font-size: 1.35rem;
-    text-align: right;
-    transform-origin: right center;
-  }
-  .ow-item--selected { font-size: 1.55rem; }
   .about-reveal__stage { padding: var(--space-10) var(--page-gutter) var(--space-24); }
   .about-reveal__heading {
     width: min(100%, 34rem);
@@ -3017,10 +3022,24 @@ a {
     display: flex;
   }
 
+  .ow-toggle.is-open {
+    top: calc(var(--home-gutter, var(--page-gutter)) + 0.75rem);
+    right: calc(var(--home-gutter, var(--page-gutter)) + 0.25rem);
+  }
+
   /* Keep the menu panel legible in white; only the hamburger/X reacts to the
      pixels beneath it, matching the fixed header's exclusion treatment. */
   .ow-toggle__bars {
     mix-blend-mode: exclusion;
+  }
+
+  /* The former circular menu blurred the actual scene as well as its glass
+     layer. Repeating that treatment keeps detailed video frames from reading
+     sharply through the full-screen menu. */
+  html.ow-scroll-lock .persistent-hero-video,
+  html.ow-scroll-lock .cargo-home > :not(.ow-toggle, .ow-backdrop),
+  html.ow-scroll-lock .cargo-page > :not(.ow-toggle, .ow-backdrop) {
+    filter: blur(14px);
   }
 
   .about-reveal__stage {
