@@ -57,7 +57,7 @@
 
     var normalized = pool.map(function (image) {
       if (typeof image === 'string') return { src: image, alt: '' };
-      return { src: image.src || '', alt: image.alt || '' };
+      return { src: image.src || '', thumb: image.thumb || image.src || '', alt: image.alt || '' };
     });
 
     var used = [];
@@ -75,7 +75,7 @@
     }
 
     return coords.map(function (c, idx) {
-      return Object.assign({}, c, { src: used[idx].src, alt: used[idx].alt });
+      return Object.assign({}, c, { src: used[idx].src, thumb: used[idx].thumb, alt: used[idx].alt });
     });
   }
 
@@ -192,7 +192,7 @@
 
       if (it.src) {
         var img = document.createElement('img');
-        img.src = it.src;
+        img.src = it.thumb || it.src;
         img.draggable = false;
         img.alt = it.alt || '';
         img_wrap.appendChild(img);

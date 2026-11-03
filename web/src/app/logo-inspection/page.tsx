@@ -32,7 +32,7 @@ export default function LogoInspectionPage() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`/media/${logo.file}`}
+              src={`/media/full/${encodeURIComponent(logo.file)}.webp`}
               alt=""
               style={{
                 display: "block",

@@ -6,6 +6,7 @@ const ARCHIVE_EXCLUDED_PATTERN = /Prancheta/i;
 
 export type ArchiveImage = {
   src: string;
+  thumb: string;
   alt: string;
 };
 
@@ -16,5 +17,12 @@ export function getArchiveImages(): ArchiveImage[] {
         ARCHIVE_IMAGE_PATTERN.test(name) &&
         !ARCHIVE_EXCLUDED_PATTERN.test(name),
     )
-    .map((name) => ({ src: `/media/${name}`, alt: "" }));
+    .map((name) => {
+      const file = `${encodeURIComponent(name)}.webp`;
+      return {
+        src: `/media/full/${file}`,
+        thumb: `/media/thumb/${file}`,
+        alt: "",
+      };
+    });
 }

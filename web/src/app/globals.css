@@ -2655,7 +2655,7 @@ a {
   min-height: 560px;
   align-items: flex-end;
   overflow: hidden;
-  background: var(--ds-ink-800) url("/media/O3136678_18122024-_MG_8811-2.jpg") center 42% / cover no-repeat;
+  background: var(--ds-ink-800) url("/media/full/O3136678_18122024-_MG_8811-2.jpg.webp") center 42% / cover no-repeat;
 }
 
 .ab-hero-logo {
@@ -2754,16 +2754,12 @@ a {
 .iris-transition__circle {
   --iris-x: 50vw;
   --iris-y: 50vh;
-  --iris-radius: 1;
+  --iris-radius: 100vmax;
   position: fixed;
-  top: var(--iris-y);
-  left: var(--iris-x);
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
+  inset: 0;
   background: #fff;
-  transform: translate(-50%, -50%) scale(0);
-  will-change: transform;
+  clip-path: circle(0px at var(--iris-x) var(--iris-y));
+  will-change: clip-path;
 }
 
 .iris-transition.is-entering .iris-transition__circle {
@@ -2771,7 +2767,7 @@ a {
 }
 
 .iris-transition.is-covered .iris-transition__circle {
-  transform: translate(-50%, -50%) scale(var(--iris-radius));
+  clip-path: circle(var(--iris-radius) at var(--iris-x) var(--iris-y));
 }
 
 .iris-transition.is-leaving .iris-transition__circle {
@@ -2779,22 +2775,18 @@ a {
 }
 
 .iris-transition.is-reduced .iris-transition__circle {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-  transform: none;
+  clip-path: inset(0);
   animation: none;
 }
 
 @keyframes iris-cover {
-  from { transform: translate(-50%, -50%) scale(0); }
-  to { transform: translate(-50%, -50%) scale(var(--iris-radius)); }
+  from { clip-path: circle(0px at var(--iris-x) var(--iris-y)); }
+  to { clip-path: circle(var(--iris-radius) at var(--iris-x) var(--iris-y)); }
 }
 
 @keyframes iris-reveal {
-  from { transform: translate(-50%, -50%) scale(var(--iris-radius)); }
-  to { transform: translate(-50%, -50%) scale(0); }
+  from { clip-path: circle(var(--iris-radius) at var(--iris-x) var(--iris-y)); }
+  to { clip-path: circle(0px at var(--iris-x) var(--iris-y)); }
 }
 
 .page-loader {
@@ -2830,15 +2822,19 @@ a {
   animation: none;
 }
 
-.page-loader__video {
+.page-loader__picture,
+.page-loader__image {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.page-loader__image {
   object-fit: cover;
   pointer-events: none;
 }
 
-/* The alpha video performs the normal reveal. These animations are only a
+/* The alpha image performs the normal reveal. These animations are only a
    safety net for playback failures or disabled JavaScript. */
 @keyframes page-loader-hide-failsafe {
   to {

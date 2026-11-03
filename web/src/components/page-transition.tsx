@@ -68,7 +68,7 @@ function IrisCurtain({
           {
             "--iris-x": `${origin.x}px`,
             "--iris-y": `${origin.y}px`,
-            "--iris-radius": radius,
+            "--iris-radius": `${radius}px`,
           } as CSSProperties
         }
         onAnimationEnd={(event) => {

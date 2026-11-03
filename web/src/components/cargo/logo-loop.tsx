@@ -61,7 +61,7 @@ export function LogoLoop() {
           <div className="ll-item" key={`${logo.file}-${index}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`/media/${logo.file}`}
+              src={`/media/full/${encodeURIComponent(logo.file)}.webp`}
               alt=""
               loading="lazy"
               style={{ "--logo-scale": logo.scale } as CSSProperties}

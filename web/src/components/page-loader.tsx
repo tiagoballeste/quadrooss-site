@@ -18,14 +18,17 @@ const MAX_SITE_BLUR = 20;
 const BLUR_START_PROGRESS = 0.58;
 const BLUR_END_PROGRESS = 0.82;
 const FALLBACK_TIMEOUT = 8000;
+const LOADER_DURATION = 3300;
 
 export function PageLoader({ enabled }: PageLoaderProps) {
   const [visible, setVisible] = useState(enabled);
+  const [ready, setReady] = useState(false);
   const loaderRef = useRef<HTMLDivElement>(null);
   const siteBlurRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   const revealTimeline = useRef<gsap.core.Timeline | null>(null);
   const monitorFrame = useRef<number | null>(null);
+  const startedAt = useRef<number | null>(null);
   const finished = useRef(false);
 
   const complete = useCallback(() => {
@@ -36,7 +39,6 @@ export function PageLoader({ enabled }: PageLoaderProps) {
   const finish = useCallback(() => {
     if (finished.current) return;
     finished.current = true;
-    videoRef.current?.pause();
     siteBlurRef.current?.style.setProperty("--page-loader-site-blur", "0px");
     complete();
   }, [complete]);
@@ -44,8 +46,6 @@ export function PageLoader({ enabled }: PageLoaderProps) {
   const failOpen = useCallback(() => {
     if (finished.current) return;
     finished.current = true;
-    videoRef.current?.pause();
-
     const loader = loaderRef.current;
     const siteBlur = siteBlurRef.current;
 
@@ -78,20 +78,11 @@ export function PageLoader({ enabled }: PageLoaderProps) {
     }
   }, [complete]);
 
-  const syncBlurToVideo = useCallback(() => {
-    const video = videoRef.current;
+  const syncBlur = useCallback((progress: number) => {
     const siteBlur = siteBlurRef.current;
 
-    if (
-      !video ||
-      !siteBlur ||
-      !Number.isFinite(video.duration) ||
-      video.duration <= 0
-    ) {
-      return;
-    }
+    if (!siteBlur) return;
 
-    const progress = video.currentTime / video.duration;
     const revealProgress = Math.min(
       1,
       Math.max(
@@ -106,27 +97,29 @@ export function PageLoader({ enabled }: PageLoaderProps) {
     siteBlur.style.setProperty("--page-loader-site-blur", `${blur.toFixed(2)}px`);
   }, []);
 
-  const handlePlaybackProgress = useCallback(() => {
+  const handleImageLoad = useCallback(() => {
+    if (startedAt.current !== null || finished.current) return;
+    startedAt.current = window.performance.now();
     loaderRef.current?.classList.add("is-playing");
-    syncBlurToVideo();
 
-    if (monitorFrame.current !== null) return;
-
-    const monitor = () => {
-      const video = videoRef.current;
-
-      if (!video || finished.current) return;
-
-      syncBlurToVideo();
-
+    const monitor = (now: number) => {
+      if (startedAt.current === null || finished.current) return;
+      const progress = Math.min(1, (now - startedAt.current) / LOADER_DURATION);
+      syncBlur(progress);
+      if (progress >= 1) {
+        finish();
+        return;
+      }
       monitorFrame.current = window.requestAnimationFrame(monitor);
     };
 
     monitorFrame.current = window.requestAnimationFrame(monitor);
-  }, [syncBlurToVideo]);
+  }, [finish, syncBlur]);
 
   useEffect(() => {
     if (!enabled) return;
+
+    setReady(true);
 
     const fallback = window.setTimeout(failOpen, FALLBACK_TIMEOUT);
 
@@ -138,6 +131,12 @@ export function PageLoader({ enabled }: PageLoaderProps) {
       revealTimeline.current?.kill();
     };
   }, [enabled, failOpen]);
+
+  useEffect(() => {
+    if (ready && imageRef.current?.complete && imageRef.current.naturalWidth > 0) {
+      handleImageLoad();
+    }
+  }, [handleImageLoad, ready]);
 
   if (!visible) return null;
 
@@ -159,33 +158,24 @@ export function PageLoader({ enabled }: PageLoaderProps) {
         className="page-loader"
         aria-label="Carregando o site"
       >
-        <video
-          ref={videoRef}
-          className="page-loader__video"
-          autoPlay
-          controls={false}
-          controlsList="nodownload noplaybackrate nofullscreen noremoteplayback"
-          disablePictureInPicture
-          muted
-          playsInline
-          preload="auto"
-          onLoadedData={handlePlaybackProgress}
-          onPlaying={handlePlaybackProgress}
-          onTimeUpdate={handlePlaybackProgress}
-          onEnded={finish}
-          onError={failOpen}
-        >
-          <source
-            media="(max-width: 700px)"
-            src="/motion/page-loader-alpha-mobile.webm"
-            type='video/webm; codecs="vp9"'
-          />
-          <source
-            src="/motion/page-loader-alpha.webm"
-            type='video/webm; codecs="vp9"'
-          />
-          Seu navegador não oferece suporte ao vídeo de abertura.
-        </video>
+        {ready && (
+          <picture className="page-loader__picture">
+            <source
+              media="(max-width: 700px)"
+              srcSet="/motion/page-loader-alpha-mobile.webp"
+              type="image/webp"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imageRef}
+              className="page-loader__image"
+              src="/motion/page-loader-alpha.webp"
+              alt=""
+              onLoad={handleImageLoad}
+              onError={failOpen}
+            />
+          </picture>
+        )}
       </div>
     </Fragment>
   );
