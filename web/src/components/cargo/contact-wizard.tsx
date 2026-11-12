@@ -2,15 +2,58 @@
 
 import { ChangeEvent, FormEvent, useState } from "react";
 import { siteConfig } from "@/lib/site-config";
+import { useLocale } from "@/components/use-locale";
 
-const steps = [
-  ["Seu nome", "Como você gostaria de ser chamado?", "name", "text"],
-  ["Seu contato", "Qual é o melhor e-mail para retornarmos?", "email", "email"],
-  ["Sobre o projeto", "Conta um pouco sobre a ideia, o escopo e o prazo.", "message", "textarea"],
-  ["Último passo", "Se quiser, anexe referências e materiais do projeto.", "files", "file"],
-] as const;
+const STEPS = {
+  pt: [
+    ["Seu nome", "Como você gostaria de ser chamado?", "name", "text"],
+    ["Seu contato", "Qual é o melhor e-mail para retornarmos?", "email", "email"],
+    ["Sobre o projeto", "Conta um pouco sobre a ideia, o escopo e o prazo.", "message", "textarea"],
+    ["Último passo", "Se quiser, anexe referências e materiais do projeto.", "files", "file"],
+  ],
+  en: [
+    ["Your name", "What should I call you?", "name", "text"],
+    ["Your contact", "What's the best email to get back to you?", "email", "email"],
+    ["About the project", "Tell me a bit about the idea, the scope and the timeline.", "message", "textarea"],
+    ["Last step", "If you'd like, attach references and project materials.", "files", "file"],
+  ],
+} as const;
+
+const COPY = {
+  pt: {
+    subject: (name: string) => `Novo projeto — ${name}`,
+    name: "Nome",
+    email: "E-mail",
+    about: "Sobre o projeto:",
+    files: "Arquivos para anexar",
+    none: "nenhum",
+    sentTitle: "Mensagem preparada.",
+    sentText: "Revise os dados no seu aplicativo de e-mail e conclua o envio.",
+    back: "Voltar",
+    send: "Enviar",
+    next: "Continuar",
+    direct: "Ou fale diretamente:",
+  },
+  en: {
+    subject: (name: string) => `New project: ${name}`,
+    name: "Name",
+    email: "Email",
+    about: "About the project:",
+    files: "Files to attach",
+    none: "none",
+    sentTitle: "Message ready.",
+    sentText: "Check the details in your email app and send it.",
+    back: "Back",
+    send: "Send",
+    next: "Continue",
+    direct: "Or reach out directly:",
+  },
+} as const;
 
 export function ContactWizard({ theme = "dark" }: { theme?: "dark" | "light" }) {
+  const locale = useLocale();
+  const steps = STEPS[locale];
+  const copy = COPY[locale];
   const [step, setStep] = useState(0);
   const [sent, setSent] = useState(false);
   const [values, setValues] = useState({
@@ -28,17 +71,15 @@ export function ContactWizard({ theme = "dark" }: { theme?: "dark" | "light" }) 
       return;
     }
 
-    const subject = `Novo projeto — ${values.name}`;
+    const subject = copy.subject(values.name);
     const body = [
-      `Nome: ${values.name}`,
-      `E-mail: ${values.email}`,
+      `${copy.name}: ${values.name}`,
+      `${copy.email}: ${values.email}`,
       "",
-      "Sobre o projeto:",
+      copy.about,
       values.message,
       "",
-      values.files.length > 0
-        ? `Arquivos para anexar: ${values.files.join(", ")}`
-        : "Arquivos para anexar: nenhum",
+      `${copy.files}: ${values.files.length > 0 ? values.files.join(", ") : copy.none}`,
     ].join("\n");
 
     window.location.href = `mailto:${siteConfig.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -56,8 +97,8 @@ export function ContactWizard({ theme = "dark" }: { theme?: "dark" | "light" }) 
     return (
       <section className={`msf-wrap msf-wrap--${theme}`}>
         <div className="msf-success">
-          <h2>Mensagem preparada.</h2>
-          <p>Revise os dados no seu aplicativo de e-mail e conclua o envio.</p>
+          <h2>{copy.sentTitle}</h2>
+          <p>{copy.sentText}</p>
         </div>
       </section>
     );
@@ -119,19 +160,19 @@ export function ContactWizard({ theme = "dark" }: { theme?: "dark" | "light" }) 
               type="button"
               onClick={() => setStep((current) => current - 1)}
             >
-              Voltar
+              {copy.back}
             </button>
           )}
           <button className="msf-btn" type="submit">
             <span className="msf-btn-label">
-              {step === steps.length - 1 ? "Enviar" : "Continuar"}
+              {step === steps.length - 1 ? copy.send : copy.next}
             </span>
             <span className="msf-btn-icon">↗</span>
           </button>
         </div>
       </form>
       <div className="msf-foot">
-        <span>Ou fale diretamente:</span>
+        <span>{copy.direct}</span>
         <a href={`mailto:${siteConfig.email}`}>{siteConfig.email}</a>
       </div>
     </section>

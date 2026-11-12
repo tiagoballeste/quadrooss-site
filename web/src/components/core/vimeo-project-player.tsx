@@ -1,5 +1,6 @@
 "use client";
 
+import { useUi } from "@/components/use-locale";
 import Player, {
   type PlaybackRateChangeEvent,
   type QualityChangeEvent,
@@ -81,6 +82,7 @@ export function VimeoProjectPlayer({
   title: string;
   vimeoId: string;
 }) {
+  const ui = useUi();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerRef = useRef<Player | null>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -319,13 +321,13 @@ export function VimeoProjectPlayer({
         ref={iframeRef}
         src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&controls=0&title=0&byline=0&portrait=0&dnt=1`}
         tabIndex={-1}
-        title={`Vídeo do projeto ${title}`}
+        title={ui.player.videoOf(title)}
         transition={{ delay: 0.18, duration: 0.38, ease: "easeOut" }}
       />
 
-      <div className="work-project-player-controls" aria-label="Controles do vídeo">
+      <div className="work-project-player-controls" aria-label={ui.player.controls}>
         <button
-          aria-label={isPlaying ? "Pausar vídeo" : "Reproduzir vídeo"}
+          aria-label={isPlaying ? ui.player.pause : ui.player.play}
           onClick={togglePlayback}
           type="button"
         >
@@ -336,7 +338,7 @@ export function VimeoProjectPlayer({
           {formatTime(currentTime)}
         </span>
         <input
-          aria-label="Progresso do vídeo"
+          aria-label={ui.player.progress}
           className="work-project-player-controls__progress"
           max={Math.max(duration, 0.01)}
           min="0"
@@ -351,14 +353,14 @@ export function VimeoProjectPlayer({
 
         <div className="work-project-player-volume">
           <button
-            aria-label={isMuted ? "Ativar som" : "Desativar som"}
+            aria-label={isMuted ? ui.player.unmute : ui.player.mute}
             onClick={toggleMuted}
             type="button"
           >
             <SpeakerIcon muted={isMuted || volume === 0} />
           </button>
           <input
-            aria-label="Volume do vídeo"
+            aria-label={ui.player.volume}
             aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}%`}
             className="work-project-player-volume__slider"
             max="1"
@@ -386,7 +388,7 @@ export function VimeoProjectPlayer({
             <button
               aria-expanded={openMenu === "quality"}
               aria-haspopup="menu"
-              aria-label={`Qualidade do vídeo: ${activeQualityLabel}`}
+              aria-label={ui.player.quality(activeQualityLabel)}
               className="work-project-player-setting__trigger is-quality"
               onClick={() =>
                 setOpenMenu((current) =>
@@ -401,7 +403,7 @@ export function VimeoProjectPlayer({
               {openMenu === "quality" ? (
                 <motion.div
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  aria-label="Selecionar qualidade do vídeo"
+                  aria-label={ui.player.selectQuality}
                   className="work-project-player-setting__menu"
                   exit={{ opacity: 0, scale: 0.96, y: 4 }}
                   initial={{ opacity: 0, scale: 0.96, y: 4 }}
@@ -437,7 +439,7 @@ export function VimeoProjectPlayer({
             <button
               aria-expanded={openMenu === "speed"}
               aria-haspopup="menu"
-              aria-label={`Velocidade de reprodução: ${formatPlaybackRate(playbackRate)}`}
+              aria-label={ui.player.speed(formatPlaybackRate(playbackRate))}
               className="work-project-player-setting__trigger"
               onClick={() =>
                 setOpenMenu((current) =>
@@ -452,7 +454,7 @@ export function VimeoProjectPlayer({
               {openMenu === "speed" ? (
                 <motion.div
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  aria-label="Selecionar velocidade de reprodução"
+                  aria-label={ui.player.selectSpeed}
                   className="work-project-player-setting__menu"
                   exit={{ opacity: 0, scale: 0.96, y: 4 }}
                   initial={{ opacity: 0, scale: 0.96, y: 4 }}
@@ -484,7 +486,7 @@ export function VimeoProjectPlayer({
         </div>
 
         <button
-          aria-label="Abrir vídeo em tela cheia"
+          aria-label={ui.player.fullscreen}
           onClick={enterFullscreen}
           type="button"
         >

@@ -1,6 +1,9 @@
 ---
 title: Rolês
 descriptor: Cotidiano
+title_en: Hangouts
+descriptor_en: Everyday
+intro_en: "Friends, the street and everything in between one gig and the next."
 order: 5
 cover: X3143875_umnro.jpg
 photos:

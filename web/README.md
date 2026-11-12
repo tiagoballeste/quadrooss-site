@@ -62,6 +62,26 @@ Texto curto de abertura da galeria (opcional).
 - Uma foto pode estar em mais de uma galeria, ou em nenhuma (aí aparece só no domo).
 - Para criar uma galeria nova, basta um arquivo novo. O build avisa com o nome do arquivo se faltar um campo ou se uma foto não existir em `/media`.
 
+## Idiomas (PT-BR e EN-US)
+
+O site existe em português nos endereços atuais e em inglês sob `/en` (`/en/work`, `/en/journal/...`).
+
+- **Escolha automática:** `functions/_middleware.js` roda no Cloudflare Pages. Na primeira visita, quem acessa do Brasil fica em português e o resto do mundo vai para a mesma página em inglês. A escolha fica salva no cookie `qd_lang`.
+- **Escolha manual:** o seletor PT-BR / EN-US (no topo, e no menu do celular) troca de idioma e grava o cookie. Depois disso o país não manda mais: o endereço é respeitado.
+- **Robôs e prévias de link** (Google, WhatsApp, Instagram...) nunca são redirecionados.
+- **Teste:** só em previews (`<branch>.quadrooss-site.pages.dev`), `?__country=US` simula uma visita daquele país. Limpe o cookie `qd_lang` antes.
+
+Onde ficam os textos:
+
+- Interface (menus, botões, rótulos): `src/i18n/ui.ts`.
+- Journal: `content/journal/en/<mesmo slug>.md` com `title`, `excerpt`, `place`, `series` e o texto traduzido. O que faltar usa o português.
+- Galerias: `title_en`, `descriptor_en` e `intro_en` no próprio arquivo da galeria.
+- Créditos do Work: os cargos passam por `src/i18n/credits.ts`.
+- Página Contact (scripts do Cargo): `src/i18n/contact-page.ts`.
+- About: `src/views/about.tsx`.
+
+Cada página tem a sua versão em `src/views/`, usada pelas rotas em português (`src/app/<página>`) e em inglês (`src/app/en/<página>`).
+
 ## Build e deploy (Cloudflare Pages)
 
 O site é 100% estático. `npm run build` gera HTML, CSS, JS e imagens em `out/`, e o Cloudflare Pages publica essa pasta a cada push no `main`.

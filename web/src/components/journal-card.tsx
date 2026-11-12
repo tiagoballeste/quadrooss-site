@@ -1,5 +1,7 @@
 import { TransitionLink } from "@/components/page-transition";
 import type { JournalPost } from "@/lib/journal";
+import { getUi } from "@/i18n/ui";
+import type { Locale } from "@/lib/i18n";
 
 export type JournalCardData = Pick<
   JournalPost,
@@ -7,13 +9,15 @@ export type JournalCardData = Pick<
 > & { tag: string };
 
 type JournalCardProps = {
+  /** For the "opens on YouTube" label of posts without a page. */
+  locale?: Locale;
   post: JournalCardData;
   /** "episode" uses the 5:4 crop of the series covers, "wide" a 16:9 one. */
   shape?: "episode" | "wide";
   showDate?: boolean;
 };
 
-export function JournalCard({ post, shape = "episode", showDate = true }: JournalCardProps) {
+export function JournalCard({ post, shape = "episode", showDate = true, locale = "pt" }: JournalCardProps) {
   const content = (
     <>
       <span className={`journal-card__media journal-card__media--${shape}`}>
@@ -48,7 +52,7 @@ export function JournalCard({ post, shape = "episode", showDate = true }: Journa
 
   return (
     <a
-      aria-label={`${post.title} (abre no YouTube)`}
+      aria-label={getUi(locale).journal.opensOnYoutube(post.title)}
       className="journal-card"
       href={post.href}
       rel="noreferrer"

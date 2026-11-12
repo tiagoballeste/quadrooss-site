@@ -4,6 +4,7 @@ import { ViewTransition, useCallback, useEffect, useMemo, useRef, useState, type
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { journalCoverName } from "@/lib/journal-names";
+import { useUi } from "@/components/use-locale";
 import {
   CARD_LAYOUT_TRANSITION,
   CARD_VARIANTS,
@@ -39,11 +40,7 @@ export type JournalItem = {
 
 type Filter = "todos" | "vlog" | "set";
 
-const FILTERS: Array<{ id: Filter; label: string }> = [
-  { id: "todos", label: "Todos" },
-  { id: "vlog", label: "Vlogs" },
-  { id: "set", label: "Sets" },
-];
+const FILTER_IDS: Filter[] = ["todos", "vlog", "set"];
 
 let arrivalTimer = 0;
 
@@ -55,6 +52,7 @@ function markJournalArrival() {
 }
 
 function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean }) {
+  const ui = useUi();
   const resetTilt = useCallback((element: HTMLElement) => {
     element.style.setProperty("--work-card-rotate-x", "0deg");
     element.style.setProperty("--work-card-rotate-y", "0deg");
@@ -72,7 +70,7 @@ function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean })
 
   return (
     <Link
-      aria-label={`${item.title}, abrir post`}
+      aria-label={ui.journal.openPost(item.title)}
       className="work-project-card journal-project-card"
       href={item.pageHref}
       transitionTypes={["journal-open"]}
@@ -111,6 +109,7 @@ function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean })
 }
 
 export function JournalIndex({ items }: { items: JournalItem[] }) {
+  const ui = useUi();
   const [activeFilter, setActiveFilter] = useState<Filter>("todos");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
@@ -174,23 +173,20 @@ export function JournalIndex({ items }: { items: JournalItem[] }) {
     <section className="work-catalog" aria-label="Journal">
       <aside className="work-catalog__sidebar">
         <div className="work-catalog__sidebar-inner">
-          <p className="work-catalog__intro">
-            Um pouco do que ando vivendo: o diário de bordo do mochilão pela Europa e a curadoria
-            musical que ando fazendo.
-          </p>
+          <p className="work-catalog__intro">{ui.journal.intro}</p>
 
           <div className="work-catalog__filters">
-            <span>Filtro</span>
-            <div className="work-catalog__filter-list" aria-label="Filtrar posts">
-              {FILTERS.map((filter) => (
+            <span>{ui.journal.filter}</span>
+            <div className="work-catalog__filter-list" aria-label={ui.journal.filterPosts}>
+              {FILTER_IDS.map((filter) => (
                 <button
-                  aria-pressed={activeFilter === filter.id}
-                  className={activeFilter === filter.id ? "is-active" : undefined}
-                  key={filter.id}
-                  onClick={() => selectFilter(filter.id)}
+                  aria-pressed={activeFilter === filter}
+                  className={activeFilter === filter ? "is-active" : undefined}
+                  key={filter}
+                  onClick={() => selectFilter(filter)}
                   type="button"
                 >
-                  {filter.label}
+                  {ui.journal.filters[filter]}
                 </button>
               ))}
             </div>
@@ -200,7 +196,7 @@ export function JournalIndex({ items }: { items: JournalItem[] }) {
 
       <div aria-busy={isFilterTransitioning} aria-live="polite" className="work-catalog__results">
         <p className="sr-only">
-          {filteredItems.length} posts no filtro {FILTERS.find((item) => item.id === activeFilter)?.label}.
+          {ui.journal.resultCount(filteredItems.length)}
         </p>
         <LayoutGroup id="journal-post-filter">
           <motion.div className="work-catalog__grid" layout={!reducedMotion}>

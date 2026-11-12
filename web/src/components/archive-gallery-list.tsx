@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { TransitionLink } from "@/components/page-transition";
+import { useUi } from "@/components/use-locale";
 import type { GallerySummary } from "@/lib/gallery";
 
 /*
@@ -19,14 +20,15 @@ type Props = {
 
 export function ArchiveGalleryList({ heading, galleries }: Props) {
   const reduceMotion = useReducedMotion();
+  const ui = useUi();
 
   return (
     <section className="archive-gallery" id="gallery" aria-labelledby="archive-gallery-title">
       <header className="archive-gallery__head">
-        <span className="archive-gallery__label">(Gallery)</span>
+        <span className="archive-gallery__label">{ui.archive.label}</span>
         <h2 className="archive-gallery__title" id="archive-gallery-title">{heading}</h2>
         <span className="archive-gallery__label archive-gallery__label--end" aria-hidden="true">
-          Abra uma galeria <span className="archive-gallery__arrow">↘</span>
+          {ui.archive.openGallery} <span className="archive-gallery__arrow">↘</span>
         </span>
       </header>
 
@@ -55,7 +57,7 @@ export function ArchiveGalleryList({ heading, galleries }: Props) {
               <span className="archive-gallery__meta">{gallery.descriptor}</span>
               <span className="archive-gallery__meta archive-gallery__count">{gallery.countLabel}</span>
               <span className="archive-gallery__view">
-                Ver <span className="archive-gallery__arrow" aria-hidden="true">↗</span>
+                {ui.archive.view} <span className="archive-gallery__arrow" aria-hidden="true">↗</span>
               </span>
             </TransitionLink>
           </motion.li>

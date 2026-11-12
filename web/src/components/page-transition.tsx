@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { localeFromPath, localizePath, type Locale } from "@/lib/i18n";
 import {
   createContext,
   type ComponentProps,
@@ -96,16 +97,23 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
 type TransitionLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
   href: string;
   transitionLabel?: string;
+  /** Target language. Left out, internal links stay in the current one. */
+  locale?: Locale;
 };
 
 export function TransitionLink({
-  href,
+  href: rawHref,
   transitionLabel: _transitionLabel,
+  locale,
   onClick,
   children,
   ...props
 }: TransitionLinkProps) {
   const startTransition = useContext(PageTransitionContext);
+  const currentLocale = localeFromPath(usePathname());
+  // Internal paths are written in Portuguese ("/work"); on an English page
+  // they point to the English one ("/en/work").
+  const href = localizePath(rawHref, locale ?? currentLocale);
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event);

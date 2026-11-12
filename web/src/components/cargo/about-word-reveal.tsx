@@ -8,6 +8,7 @@ import {
   type MotionValue,
 } from "motion/react";
 import { Fragment, useRef } from "react";
+import { useLocale } from "@/components/use-locale";
 
 export const ABOUT_COPY = {
   "pt-BR": [
@@ -22,7 +23,6 @@ export const ABOUT_COPY = {
   ],
 } as const;
 
-const PARAGRAPHS = ABOUT_COPY["pt-BR"];
 
 const START_OPACITY = 0.15;
 const SPREAD = 0.8;
@@ -71,6 +71,7 @@ function Word({
 }
 
 export function AboutWordReveal() {
+  const PARAGRAPHS = ABOUT_COPY[useLocale() === "en" ? "en-US" : "pt-BR"];
   const sectionRef = useRef<HTMLElement>(null);
   const reducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({

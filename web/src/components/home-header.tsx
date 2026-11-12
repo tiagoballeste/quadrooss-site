@@ -4,6 +4,13 @@ import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { usePathname } from "next/navigation";
 import { TransitionLink } from "@/components/page-transition";
 import { BrandLogo } from "@/components/brand-logo";
+import { getUi } from "@/i18n/ui";
+import { LANG_COOKIE, LOCALES, LOCALE_LABEL, localeFromPath, stripLocale, type Locale } from "@/lib/i18n";
+
+function rememberLocale(locale: Locale) {
+  // Read by the Cloudflare middleware: a manual choice beats the country.
+  document.cookie = `${LANG_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
+}
 
 const homeNavigation = [
   { label: "Work", href: "/work" },
@@ -15,6 +22,9 @@ const homeNavigation = [
 
 export function HomeHeader() {
   const pathname = usePathname();
+  const locale = localeFromPath(pathname);
+  const ui = getUi(locale);
+  const basePath = stripLocale(pathname ?? "/");
   const [languageOpen, setLanguageOpen] = useState(false);
   const languageMenuRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +47,7 @@ export function HomeHeader() {
   }, []);
 
   const scrollToHero = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (pathname !== "/") return;
+    if (basePath !== "/") return;
 
     if (
       event.button !== 0 ||
@@ -56,7 +66,7 @@ export function HomeHeader() {
   return (
     <header className="home-header">
       <TransitionLink
-        aria-label={pathname === "/" ? "Voltar à seção hero" : "Voltar à página inicial"}
+        aria-label={basePath === "/" ? ui.nav.backToHero : ui.nav.backToHome}
         className="home-header__brand"
         href="/"
         onClick={scrollToHero}
@@ -64,7 +74,7 @@ export function HomeHeader() {
         <BrandLogo priority />
       </TransitionLink>
 
-      <nav className="home-header__navigation" aria-label="Navegação principal">
+      <nav className="home-header__navigation" aria-label={ui.nav.main}>
         {homeNavigation.map(({ label, href }) => (
           <TransitionLink href={href} key={href} transitionLabel={label.toUpperCase()}>
             {label}
@@ -80,28 +90,28 @@ export function HomeHeader() {
           onClick={() => setLanguageOpen((current) => !current)}
           type="button"
         >
-          <span>PT-BR</span>
+          <span>{LOCALE_LABEL[locale]}</span>
           <span className="home-header__language-arrow" aria-hidden="true">↓</span>
         </button>
 
-        <div className="home-header__language-menu" role="menu" aria-label="Selecionar idioma">
-          <button
-            aria-current="true"
-            onClick={() => setLanguageOpen(false)}
-            role="menuitem"
-            type="button"
-          >
-            PT-BR
-          </button>
-          <button
-            aria-disabled="true"
-            disabled
-            role="menuitem"
-            title="A versão em inglês será disponibilizada em breve"
-            type="button"
-          >
-            EN-US
-          </button>
+        <div className="home-header__language-menu" role="menu" aria-label={ui.nav.language}>
+          {LOCALES.map((option) => (
+            <TransitionLink
+              aria-current={option === locale ? "true" : undefined}
+              href={basePath}
+              hrefLang={option === "en" ? "en-US" : "pt-BR"}
+              key={option}
+              locale={option}
+              onClick={(event) => {
+                rememberLocale(option);
+                setLanguageOpen(false);
+                if (option === locale) event.preventDefault();
+              }}
+              role="menuitem"
+            >
+              {LOCALE_LABEL[option]}
+            </TransitionLink>
+          ))}
         </div>
       </div>
     </header>

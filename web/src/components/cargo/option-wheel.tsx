@@ -4,9 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { TransitionLink } from "@/components/page-transition";
 import { siteNavigation } from "@/lib/site-config";
+import { getUi } from "@/i18n/ui";
+import { LANG_COOKIE, LOCALES, LOCALE_LABEL, localeFromPath, stripLocale } from "@/lib/i18n";
 
 export function OptionWheel() {
   const pathname = usePathname();
+  const locale = localeFromPath(pathname);
+  const ui = getUi(locale);
+  const basePath = stripLocale(pathname ?? "/");
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLElement>(null);
 
@@ -38,7 +43,7 @@ export function OptionWheel() {
       <button
         className={`ow-toggle${open ? " is-open" : ""}`}
         type="button"
-        aria-label={open ? "Fechar menu" : "Abrir menu"}
+        aria-label={open ? ui.nav.closeMenu : ui.nav.openMenu}
         aria-expanded={open}
         aria-controls="responsive-navigation"
         onClick={() => setOpen((current) => !current)}
@@ -61,13 +66,13 @@ export function OptionWheel() {
         <nav
           id="responsive-navigation"
           className="ow-root"
-          aria-label="Menu de navegação"
+          aria-label={ui.nav.menu}
           tabIndex={open ? 0 : -1}
           ref={menuRef}
         >
           {siteNavigation.map(({ label, href }) => (
             <TransitionLink
-              aria-current={pathname === href ? "page" : undefined}
+              aria-current={basePath === href ? "page" : undefined}
               className="ow-item"
               href={href}
               key={href}
@@ -78,6 +83,26 @@ export function OptionWheel() {
               {label}
             </TransitionLink>
           ))}
+          <div className="ow-languages" aria-label={ui.nav.language} role="group">
+            {LOCALES.map((option) => (
+              <TransitionLink
+                aria-current={option === locale ? "true" : undefined}
+                className="ow-language"
+                href={basePath}
+                hrefLang={option === "en" ? "en-US" : "pt-BR"}
+                key={option}
+                locale={option}
+                onClick={(event) => {
+                  document.cookie = `${LANG_COOKIE}=${option}; Path=/; Max-Age=31536000; SameSite=Lax`;
+                  close();
+                  if (option === locale) event.preventDefault();
+                }}
+                tabIndex={open ? 0 : -1}
+              >
+                {LOCALE_LABEL[option]}
+              </TransitionLink>
+            ))}
+          </div>
         </nav>
       </div>
     </>

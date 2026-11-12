@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent } from "rea
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { GalleryPhoto } from "@/lib/gallery";
+import { useUi } from "@/components/use-locale";
 
 /*
  * Photo grid for a gallery page plus its full-screen viewer. The grid is a
@@ -21,6 +22,7 @@ type Props = { title: string; photos: GalleryPhoto[] };
 
 export function GalleryPhotoGrid({ title, photos }: Props) {
   const reduceMotion = useReducedMotion();
+  const ui = useUi();
   const [active, setActive] = useState<number | null>(null);
   const [direction, setDirection] = useState(0);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -68,7 +70,7 @@ export function GalleryPhotoGrid({ title, photos }: Props) {
 
   return (
     <>
-      <ol className="gallery-grid" aria-label={`Fotos de ${title}`}>
+      <ol className="gallery-grid" aria-label={ui.archive.photosOf(title)}>
         {photos.map((photo, index) => (
           <motion.li
             className="gallery-grid__item"
@@ -82,7 +84,7 @@ export function GalleryPhotoGrid({ title, photos }: Props) {
               className="gallery-grid__button"
               type="button"
               onClick={(event) => open(index, event.currentTarget)}
-              aria-label={`Abrir foto ${pad(index + 1)} de ${pad(total)}`}
+              aria-label={ui.archive.openPhoto(pad(index + 1), pad(total))}
             >
               <span className="gallery-grid__frame">
                 <img
@@ -138,6 +140,7 @@ type ViewerProps = {
 
 function GalleryViewer({ title, photos, index, direction, onClose, onStep }: ViewerProps) {
   const reduceMotion = useReducedMotion();
+  const ui = useUi();
   const dialog = useRef<HTMLDivElement>(null);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const photo = photos[index];
@@ -180,7 +183,7 @@ function GalleryViewer({ title, photos, index, direction, onClose, onStep }: Vie
       tabIndex={-1}
       role="dialog"
       aria-modal="true"
-      aria-label={`${title}, foto ${pad(index + 1)} de ${pad(total)}`}
+      aria-label={ui.archive.photoOf(title, pad(index + 1), pad(total))}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -207,7 +210,7 @@ function GalleryViewer({ title, photos, index, direction, onClose, onStep }: Vie
           {pad(index + 1)} / {pad(total)}
         </span>
         <button className="gallery-viewer__close" type="button" onClick={onClose}>
-          Fechar
+          {ui.archive.close}
         </button>
       </div>
 
@@ -237,11 +240,11 @@ function GalleryViewer({ title, photos, index, direction, onClose, onStep }: Vie
       </div>
 
       <div className="gallery-viewer__nav">
-        <button type="button" onClick={() => onStep(-1)} aria-label="Foto anterior">
-          ← Anterior
+        <button type="button" onClick={() => onStep(-1)} aria-label={ui.archive.previousLabel}>
+          {ui.archive.previous}
         </button>
-        <button type="button" onClick={() => onStep(1)} aria-label="Próxima foto">
-          Próxima →
+        <button type="button" onClick={() => onStep(1)} aria-label={ui.archive.nextLabel}>
+          {ui.archive.nextPhoto}
         </button>
       </div>
     </motion.div>
