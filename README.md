@@ -13,6 +13,8 @@ npm install
 npm run dev
 ```
 
+O site é publicado no **Cloudflare Pages** a partir do `main`: cada push dispara um build novo e atualiza o site. A configuração está em [`web/README.md`](web/README.md#build-e-deploy-cloudflare-pages).
+
 > **Importante para quem for desenvolver:** o Cargo é uma plataforma fechada, então não existe um "código-fonte" que roda sozinho fora dele. Este repositório traz **tudo o que dá para tirar do Cargo**: o conteúdo de cada página, o CSS, todo o código personalizado (JS/HTML), as imagens e um snapshot do HTML de cada página já renderizado. Com isso dá para recriar o site em qualquer stack (Next.js, Astro, HTML estático etc.) ou continuar editando no Cargo.
 
 ## Estrutura
