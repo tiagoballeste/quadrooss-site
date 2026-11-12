@@ -38,6 +38,30 @@ Texto do post, em parágrafos.
 - Os campos são validados no build (`src/lib/journal.ts`): faltou um obrigatório, o build para e diz em qual arquivo.
 - O formato é o que CMS baseados em Git (Pages CMS, Sveltia, Decap) editam, então dá para ligar um depois sem mudar as páginas.
 
+## Archive: galerias
+
+A lista "Gallery" embaixo do domo da `/archive` vem de `content/gallery`, um arquivo Markdown por galeria. O nome do arquivo vira o endereço: `viagens.md` abre em `/archive/viagens`.
+
+```md
+---
+title: Viagens
+descriptor: Estrada
+order: 2
+cover: R3143875_IMG_2729.webp
+photos:
+  - R3143875_IMG_2729.webp
+  - B3143875_IMG_0597.webp
+---
+
+Texto curto de abertura da galeria (opcional).
+```
+
+- `photos` são nomes de arquivo da pasta `/media` na raiz do repositório, a mesma usada pelo domo. A ordem da lista é a ordem na página.
+- `cover` é opcional; sem ela, a primeira foto vira a capa.
+- `order` define a posição na lista da Archive.
+- Uma foto pode estar em mais de uma galeria, ou em nenhuma (aí aparece só no domo).
+- Para criar uma galeria nova, basta um arquivo novo. O build avisa com o nome do arquivo se faltar um campo ou se uma foto não existir em `/media`.
+
 ## Build e deploy (Cloudflare Pages)
 
 O site é 100% estático. `npm run build` gera HTML, CSS, JS e imagens em `out/`, e o Cloudflare Pages publica essa pasta a cada push no `main`.

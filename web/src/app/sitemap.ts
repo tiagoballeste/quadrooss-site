@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getGallerySlugs } from "@/lib/gallery";
 import { getJournalPosts } from "@/lib/journal";
 import { siteConfig, siteNavigation } from "@/lib/site-config";
 
@@ -15,5 +16,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const posts: MetadataRoute.Sitemap = getJournalPosts()
     .filter((post) => post.hasPage)
     .map((post) => ({ url: `${siteConfig.url}${post.href}`, lastModified: post.date, priority: 0.6 }));
-  return [...pages, ...posts];
+  const galleries: MetadataRoute.Sitemap = getGallerySlugs().map((slug) => ({
+    url: `${siteConfig.url}/archive/${slug}`,
+    priority: 0.6,
+  }));
+  return [...pages, ...posts, ...galleries];
 }
