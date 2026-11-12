@@ -169,8 +169,13 @@
     ]
   },
   "Hidden References GQ x Podpah": {
-    "unavailable": true,
-    "items": []
+    "unavailable": false,
+    "items": [
+      {
+        "label": "Gravado e editado por",
+        "value": "@quadrooss"
+      }
+    ]
   },
   "A Fome Continua a Mesma - Niink": {
     "unavailable": false,
@@ -710,8 +715,29 @@
     ]
   },
   "Ambition Teaser": {
-    "unavailable": true,
-    "items": []
+    "unavailable": false,
+    "items": [
+      {
+        "label": "Gravado por",
+        "value": "@quadrooss, @sammnovaes"
+      },
+      {
+        "label": "Ac",
+        "value": "@iagointacli"
+      },
+      {
+        "label": "Roteiro",
+        "value": "@quadrooss, @boaventura011"
+      },
+      {
+        "label": "Vfx",
+        "value": "@dythzfx_, @sammnovaes"
+      },
+      {
+        "label": "Panfletos",
+        "value": "@the_savior"
+      }
+    ]
   },
   "Depois Desse Show Boaventura & G.A.": {
     "unavailable": false,
@@ -856,8 +882,17 @@
     ]
   },
   "Teaser Above x Coffeeshop": {
-    "unavailable": true,
-    "items": []
+    "unavailable": false,
+    "items": [
+      {
+        "label": "Direção",
+        "value": "@quadrooss & @jvveronez"
+      },
+      {
+        "label": "Editado por",
+        "value": "@sammnovaes"
+      }
+    ]
   },
   "Champion \"What Moves You?\"": {
     "unavailable": false,
@@ -1139,8 +1174,13 @@
     ]
   },
   "Bem Bolado x Planet Hemp": {
-    "unavailable": true,
-    "items": []
+    "unavailable": false,
+    "items": [
+      {
+        "label": "Edição",
+        "value": "@quadrooss, @sammnovaes e @edaurodo_"
+      }
+    ]
   },
   "Tevito - Valores (Prod. C4)": {
     "unavailable": false,
@@ -1265,8 +1305,17 @@
     ]
   },
   "RA2": {
-    "unavailable": true,
-    "items": []
+    "unavailable": false,
+    "items": [
+      {
+        "label": "Gravado por",
+        "value": "@aff.gaff & @Vitorfenich"
+      },
+      {
+        "label": "Direção e Edição por",
+        "value": "@quadrooss"
+      }
+    ]
   },
   "Aftermovie Supernova": {
     "unavailable": false,

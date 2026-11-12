@@ -1,4 +1,7 @@
 [
+  { "title": "Rosewood", "roles": ["video"], "vimeoTitle": "ROSEWOOD" },
+  { "title": "Recap Heserved", "roles": ["video"], "vimeoTitle": "RECAP HESERVED" },
+  { "title": "Priscilla The Town", "roles": ["video"], "vimeoTitle": "PRISCILLA THE TOWN" },
   { "title": "Kyan Brasília", "roles": ["video"] },
   { "title": "Campinas Aftermovie", "roles": ["video"] },
   { "title": "Kyan Xangri-Lá", "roles": ["video"] },
