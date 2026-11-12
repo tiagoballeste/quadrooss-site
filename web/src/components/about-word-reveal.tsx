@@ -73,10 +73,11 @@ function Word({
 export function AboutWordReveal() {
   const PARAGRAPHS = ABOUT_COPY[useLocale() === "en" ? "en-US" : "pt-BR"];
   const sectionRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const reducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start 82%", "start 50%"],
+    target: headingRef,
+    offset: ["start 85%", "end 55%"],
   });
   const wordCount = PARAGRAPHS.join(" ").split(" ").length;
   let wordIndex = 0;
@@ -89,6 +90,7 @@ export function AboutWordReveal() {
     >
       <div className="about-reveal__stage">
         <h1
+          ref={headingRef}
           id="about-reveal-heading"
           className="about-reveal__heading"
           aria-label={PARAGRAPHS.join(" ")}

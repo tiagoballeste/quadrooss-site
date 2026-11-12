@@ -358,7 +358,7 @@ a {
 .about-reveal__heading {
   width: min(62vw, 56rem);
   margin: 0;
-  font-size: var(--text-heading-sm);
+  font-size: var(--text-lead);
   font-weight: var(--font-weight-body);
   letter-spacing: var(--tracking-tight);
   line-height: var(--leading-tight);
