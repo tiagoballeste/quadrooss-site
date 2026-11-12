@@ -18,11 +18,12 @@ type StartTransition = (href: string) => boolean;
 const PageTransitionContext = createContext<StartTransition | null>(null);
 
 /*
- * Page transition, after the Maxima Michaels reference (Framer): the browser's
- * View Transition API snapshots the old page and the new one; the old slides up
- * 30% and fades out (600ms), the new comes up from 30% below and fades in
- * (600ms, starting at 500ms). Both use cubic-bezier(0.73, 0, 0.33, 1).
- * The keyframes live in globals.css under html.is-page-transition.
+ * Page transition, after the Maxima Michaels reference (Framer's wipe effect):
+ * the browser's View Transition API snapshots the old page and the new one.
+ * The old slides up 30%, fades out and is wiped from the bottom up (a black
+ * shape rising over it), 600ms; the new rises from 30% below, fades in and is
+ * unmasked from the bottom up, 600ms starting at 500ms. Both on
+ * cubic-bezier(0.73, 0, 0.33, 1). Keyframes: globals.css, html.is-page-transition.
  * Browsers without the API, and reduced motion, navigate without animation.
  */
 
