@@ -130,7 +130,7 @@ async function fetchThumbnail(id) {
 async function trimBars(buffer) {
   const { width = 0, height = 0 } = await sharp(buffer).metadata();
   const trimmed = await sharp(buffer)
-    .trim({ background: "#000000", threshold: 14 })
+    .trim({ background: "#000000", threshold: 30 })
     .toBuffer({ resolveWithObject: true });
   // A very dark frame can lose real picture to the trim; keep the original then.
   const kept = trimmed.info.width >= width * 0.5 && trimmed.info.height >= height * 0.5;
