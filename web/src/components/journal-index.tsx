@@ -1,60 +1,261 @@
 "use client";
 
-import { useState } from "react";
-import { JournalCard, type JournalCardData } from "@/components/journal-card";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
+import {
+  MorphingDialog,
+  MorphingDialogClose,
+  MorphingDialogContainer,
+  MorphingDialogContent,
+  MorphingDialogDescription,
+  MorphingDialogImage,
+  MorphingDialogSubtitle,
+  MorphingDialogTitle,
+  MorphingDialogTrigger,
+} from "@/components/core/morphing-dialog";
+import { YouTubeProjectPlayer } from "@/components/core/youtube-project-player";
 import { TransitionLink } from "@/components/page-transition";
+import {
+  CARD_LAYOUT_TRANSITION,
+  CARD_VARIANTS,
+  PAGE_SIZE,
+  getGridColumnCount,
+} from "@/components/core/catalog-motion";
 
-export type JournalSection = {
-  id: string;
+/*
+ * Journal catalog. Same rail, filter, grid motion and morphing dialog as the
+ * Work catalog (work-projects-grid.tsx); only the content and the player differ.
+ */
+
+export type JournalItem = {
+  slug: string;
+  type: "vlog" | "set";
   title: string;
-  /** Right-hand note, e.g. "16 dias · 9 episódios". */
-  note: string;
-  kind: "vlog" | "set";
-  posts: JournalCardData[];
+  /** Card subtitle, e.g. "Ep. 08 · Paris · 28 min". */
+  subtitle: string;
+  series: string | null;
+  place: string | null;
+  credit: string | null;
+  dateLabel: string;
+  duration: string;
+  excerpt: string;
+  bodyHtml: string;
+  hasPage: boolean;
+  pageHref: string;
+  youtube: string;
+  videoId: string;
+  thumbnail: { src: string; srcSet: string | null };
 };
 
-type Filter = "all" | "vlog" | "set";
+type Filter = "todos" | "vlog" | "set";
 
-type JournalIndexProps = {
-  featured: (JournalCardData & { kicker: string; place: string | null }) | null;
-  sections: JournalSection[];
-  counts: Record<Filter, number>;
-};
-
-const FILTERS: { id: Filter; label: string }[] = [
-  { id: "all", label: "Todos" },
+const FILTERS: Array<{ id: Filter; label: string }> = [
+  { id: "todos", label: "Todos" },
   { id: "vlog", label: "Vlogs" },
   { id: "set", label: "Sets" },
 ];
 
-export function JournalIndex({ featured, sections, counts }: JournalIndexProps) {
-  const [filter, setFilter] = useState<Filter>("all");
-  const showVlogs = filter !== "set";
-  const visibleSections = sections.filter((section) => filter === "all" || section.kind === filter);
+function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean }) {
+  const resetTilt = useCallback((element: HTMLElement) => {
+    element.style.setProperty("--work-card-rotate-x", "0deg");
+    element.style.setProperty("--work-card-rotate-y", "0deg");
+  }, []);
+
+  const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === "touch") return;
+    const element = event.currentTarget;
+    const bounds = element.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+    const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+    element.style.setProperty("--work-card-rotate-x", `${y * 8}deg`);
+    element.style.setProperty("--work-card-rotate-y", `${x * -8}deg`);
+  };
+
+  const facts = [
+    { label: "Data", value: item.dateLabel },
+    { label: "Duração", value: item.duration },
+    item.place ? { label: "Lugar", value: item.place } : null,
+    item.series ? { label: "Série", value: item.series } : null,
+    item.credit ? { label: "Com", value: item.credit } : null,
+  ].filter((fact): fact is { label: string; value: string } => fact !== null);
 
   return (
-    <section className="work-catalog journal-catalog" aria-label="Journal">
+    <MorphingDialog layoutId={`journal-post-${item.videoId}`} transition={{ type: "spring", bounce: 0.05, duration: 0.34 }}>
+      <MorphingDialogTrigger
+        aria-label={`${item.title}, abrir post`}
+        className="work-project-card journal-project-card"
+        onBlur={(event) => resetTilt(event.currentTarget)}
+        onPointerLeave={(event) => resetTilt(event.currentTarget)}
+        onPointerMove={handlePointerMove}
+      >
+        <span className="work-project-card__media">
+          <span className="work-project-card__image-zoom">
+            <MorphingDialogImage
+              alt={`Capa de ${item.title}`}
+              decoding="async"
+              fetchPriority={eager ? "high" : "auto"}
+              loading={eager ? "eager" : "lazy"}
+              sizes="(max-width: 700px) 100vw, (max-width: 900px) 50vw, 30vw"
+              src={item.thumbnail.src}
+              srcSet={item.thumbnail.srcSet ?? undefined}
+            />
+          </span>
+          <span className="work-project-card__glow" aria-hidden="true" />
+        </span>
+        <span className="work-project-card__meta">
+          <strong>{item.title}</strong>
+          <small>{item.subtitle}</small>
+        </span>
+      </MorphingDialogTrigger>
+
+      <MorphingDialogContainer>
+        <MorphingDialogContent className="work-project-dialog" data-lenis-prevent>
+          <div className="work-project-dialog__media">
+            <MorphingDialogImage
+              alt=""
+              aria-hidden="true"
+              className="work-project-dialog__poster"
+              src={item.thumbnail.src}
+              srcSet={item.thumbnail.srcSet ?? undefined}
+            />
+            <YouTubeProjectPlayer title={item.title} videoId={item.videoId} />
+          </div>
+
+          <div className="work-project-dialog__body">
+            <div className="work-project-dialog__heading">
+              <MorphingDialogTitle className="work-project-dialog__title">{item.title}</MorphingDialogTitle>
+              <MorphingDialogSubtitle className="work-project-dialog__subtitle">{item.subtitle}</MorphingDialogSubtitle>
+            </div>
+
+            <MorphingDialogDescription
+              className="work-project-dialog__description"
+              disableLayoutAnimation
+              variants={{
+                initial: { opacity: 0, y: 28 },
+                animate: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { delay: 0.16, duration: 0.42, ease: [0.22, 1, 0.36, 1] },
+                },
+                exit: { opacity: 0, y: 18, transition: { duration: 0.18 } },
+              }}
+            >
+              <p className="work-project-dialog__eyebrow">{item.type === "set" ? "Sobre o set" : "Diário de bordo"}</p>
+              <div className="journal-dialog__text">
+                <p>{item.excerpt}</p>
+                {item.bodyHtml ? <div dangerouslySetInnerHTML={{ __html: item.bodyHtml }} /> : null}
+              </div>
+
+              <dl className="work-project-dialog__credits journal-dialog__facts">
+                {facts.map((fact) => (
+                  <div className="work-project-dialog__credit" key={fact.label}>
+                    <dt>{fact.label}</dt>
+                    <dd>{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="journal-dialog__links">
+                {item.hasPage ? (
+                  <TransitionLink className="journal-dialog__link" href={item.pageHref}>
+                    Abrir página do post →
+                  </TransitionLink>
+                ) : null}
+                <a className="journal-dialog__link" href={item.youtube} rel="noreferrer" target="_blank">
+                  Ver no YouTube ↗
+                </a>
+              </div>
+            </MorphingDialogDescription>
+          </div>
+
+          <MorphingDialogClose className="morphing-dialog__close" />
+        </MorphingDialogContent>
+      </MorphingDialogContainer>
+    </MorphingDialog>
+  );
+}
+
+export function JournalIndex({ items }: { items: JournalItem[] }) {
+  const [activeFilter, setActiveFilter] = useState<Filter>("todos");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
+  const [gridColumnCount, setGridColumnCount] = useState(3);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+
+  const filteredItems = useMemo(
+    () => (activeFilter === "todos" ? items : items.filter((item) => item.type === activeFilter)),
+    [activeFilter, items],
+  );
+
+  const visibleItems = filteredItems.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredItems.length;
+
+  useEffect(() => {
+    const mobileQuery = window.matchMedia("(max-width: 700px)");
+    const tabletQuery = window.matchMedia("(max-width: 900px)");
+    const updateColumnCount = () => setGridColumnCount(getGridColumnCount());
+
+    updateColumnCount();
+    mobileQuery.addEventListener("change", updateColumnCount);
+    tabletQuery.addEventListener("change", updateColumnCount);
+
+    return () => {
+      mobileQuery.removeEventListener("change", updateColumnCount);
+      tabletQuery.removeEventListener("change", updateColumnCount);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isFilterTransitioning) return;
+    const timeout = window.setTimeout(() => setIsFilterTransitioning(false), reducedMotion ? 0 : 950);
+    return () => window.clearTimeout(timeout);
+  }, [activeFilter, isFilterTransitioning, reducedMotion]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || isFilterTransitioning) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setVisibleCount((current) => Math.min(current + PAGE_SIZE, filteredItems.length));
+      },
+      { rootMargin: "0px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [filteredItems.length, hasMore, isFilterTransitioning, visibleCount]);
+
+  const selectFilter = (filter: Filter) => {
+    if (filter === activeFilter) return;
+    setIsFilterTransitioning(true);
+    setVisibleCount(PAGE_SIZE);
+    setActiveFilter(filter);
+  };
+
+  return (
+    <section className="work-catalog" aria-label="Journal">
       <aside className="work-catalog__sidebar">
         <div className="work-catalog__sidebar-inner">
-          <h1 className="work-catalog__intro">Um pouco do que ando vivendo...</h1>
-          <p className="journal-catalog__lead">
-            Um feed contínuo com anotações, o diário de bordo do mochilão pela Europa e a
-            curadoria musical que ando fazendo.
+          <p className="work-catalog__intro">
+            Um pouco do que ando vivendo: o diário de bordo do mochilão pela Europa e a curadoria
+            musical que ando fazendo.
           </p>
 
           <div className="work-catalog__filters">
             <span>Filtro</span>
-            <div className="work-catalog__filter-list" aria-label="Filtrar posts" role="group">
-              {FILTERS.map((option) => (
+            <div className="work-catalog__filter-list" aria-label="Filtrar posts">
+              {FILTERS.map((filter) => (
                 <button
-                  aria-pressed={filter === option.id}
-                  className={filter === option.id ? "is-active" : undefined}
-                  key={option.id}
-                  onClick={() => setFilter(option.id)}
+                  aria-pressed={activeFilter === filter.id}
+                  className={activeFilter === filter.id ? "is-active" : undefined}
+                  key={filter.id}
+                  onClick={() => selectFilter(filter.id)}
                   type="button"
                 >
-                  {option.label}
-                  <span className="journal-catalog__count">{String(counts[option.id]).padStart(2, "0")}</span>
+                  {filter.label}
                 </button>
               ))}
             </div>
@@ -62,52 +263,39 @@ export function JournalIndex({ featured, sections, counts }: JournalIndexProps) 
         </div>
       </aside>
 
-      <div className="journal-catalog__results" aria-live="polite">
-        {showVlogs && featured ? (
-          <article className="journal-feature">
-            <TransitionLink className="journal-feature__media" href={featured.href} tabIndex={-1} aria-hidden="true">
-              <img
-                alt=""
-                decoding="async"
-                sizes="(max-width: 900px) 100vw, 40vw"
-                src={featured.thumbnail.src}
-                srcSet={featured.thumbnail.srcSet ?? undefined}
-              />
-            </TransitionLink>
-            <div className="journal-feature__body">
-              <p className="journal-feature__kicker">
-                <span>Novo</span>
-                <span>{featured.kicker}</span>
-              </p>
-              <h2 className="journal-feature__title">
-                <TransitionLink href={featured.href}>{featured.title}</TransitionLink>
-              </h2>
-              <p className="journal-feature__excerpt">{featured.excerpt}</p>
-              <p className="journal-feature__meta">
-                <span>{featured.dateLabel}</span>
-                <span>{featured.duration}</span>
-                {featured.place ? <span>{featured.place}</span> : null}
-              </p>
-              <TransitionLink className="journal-button" href={featured.href}>
-                Ler e assistir →
-              </TransitionLink>
-            </div>
-          </article>
-        ) : null}
+      <div aria-busy={isFilterTransitioning} aria-live="polite" className="work-catalog__results">
+        <p className="sr-only">
+          {filteredItems.length} posts no filtro {FILTERS.find((item) => item.id === activeFilter)?.label}.
+        </p>
+        <LayoutGroup id="journal-post-filter">
+          <motion.div className="work-catalog__grid" layout={!reducedMotion}>
+            <AnimatePresence mode="popLayout">
+              {visibleItems.map((item, index) => {
+                const revealFromIndex = gridColumnCount === 1 ? 2 : gridColumnCount;
+                const revealsOnScroll = index >= revealFromIndex;
 
-        {visibleSections.map((section) => (
-          <section aria-labelledby={`journal-${section.id}`} className="journal-section" id={section.id} key={section.id}>
-            <header className="journal-section__head">
-              <h2 id={`journal-${section.id}`}>{section.title}</h2>
-              <span>{section.note}</span>
-            </header>
-            <div className={`journal-grid journal-grid--${section.kind}`}>
-              {section.posts.map((post) => (
-                <JournalCard key={post.slug} post={post} shape={section.kind === "set" ? "wide" : "episode"} />
-              ))}
-            </div>
-          </section>
-        ))}
+                return (
+                  <motion.div
+                    animate={revealsOnScroll || reducedMotion ? undefined : "animate"}
+                    className="work-project-card-shell"
+                    custom={index % gridColumnCount}
+                    exit={reducedMotion ? undefined : "exit"}
+                    initial={reducedMotion || !revealsOnScroll ? false : "initial"}
+                    key={`${item.videoId}-${gridColumnCount}`}
+                    layout={reducedMotion ? false : true}
+                    transition={{ layout: CARD_LAYOUT_TRANSITION }}
+                    variants={CARD_VARIANTS}
+                    viewport={{ amount: 0.18, margin: "0px 0px -8% 0px", once: true }}
+                    whileInView={reducedMotion || !revealsOnScroll ? undefined : "animate"}
+                  >
+                    <TiltJournalCard eager={index < PAGE_SIZE} item={item} />
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </motion.div>
+        </LayoutGroup>
+        <div className="work-catalog__sentinel" ref={sentinelRef} aria-hidden="true" />
       </div>
     </section>
   );
