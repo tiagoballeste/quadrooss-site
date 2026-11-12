@@ -13,7 +13,6 @@ import {
   MorphingDialogTitle,
   MorphingDialogTrigger,
 } from "@/components/core/morphing-dialog";
-import { YouTubeProjectPlayer } from "@/components/core/youtube-project-player";
 import { TransitionLink } from "@/components/page-transition";
 import {
   CARD_LAYOUT_TRANSITION,
@@ -108,8 +107,8 @@ function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean })
         </span>
       </MorphingDialogTrigger>
 
-      <MorphingDialogContainer>
-        <MorphingDialogContent className="work-project-dialog" data-lenis-prevent>
+      <MorphingDialogContainer className="journal-dialog-overlay">
+        <MorphingDialogContent className="work-project-dialog journal-dialog" data-lenis-prevent>
           <div className="work-project-dialog__media">
             <MorphingDialogImage
               alt=""
@@ -118,7 +117,14 @@ function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean })
               src={item.thumbnail.src}
               srcSet={item.thumbnail.srcSet ?? undefined}
             />
-            <YouTubeProjectPlayer title={item.title} videoId={item.videoId} />
+            {/* The Journal uses YouTube's own player; Work keeps the custom one. */}
+            <iframe
+              className="journal-dialog__player"
+              src={`https://www.youtube-nocookie.com/embed/${item.videoId}?autoplay=1&rel=0&playsinline=1`}
+              title={item.title}
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              allowFullScreen
+            />
           </div>
 
           <div className="work-project-dialog__body">

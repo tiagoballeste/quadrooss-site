@@ -190,7 +190,7 @@ export function MorphingDialogTrigger({
   );
 }
 
-export function MorphingDialogContainer({ children }: { children: ReactNode }) {
+export function MorphingDialogContainer({ children, className }: { children: ReactNode; className?: string }) {
   const [mounted, setMounted] = useState(false);
   const { open, setOpen } = useMorphingDialog();
 
@@ -203,7 +203,7 @@ export function MorphingDialogContainer({ children }: { children: ReactNode }) {
       {open ? (
         <motion.div
           animate={{ opacity: 1 }}
-          className="morphing-dialog__overlay"
+          className={className ? `morphing-dialog__overlay ${className}` : "morphing-dialog__overlay"}
           exit={{ opacity: 0 }}
           initial={{ opacity: 0 }}
           onMouseDown={(event) => {

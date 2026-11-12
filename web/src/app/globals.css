@@ -3228,12 +3228,62 @@ a {
   aspect-ratio: 5 / 4;
 }
 
-.youtube-project-player iframe {
+/* The Journal post opens full screen (Work keeps its window): a top bar for
+   the close button, the video as large as the screen allows, text below. */
+.morphing-dialog__overlay.journal-dialog-overlay {
+  align-items: stretch;
+  padding: 0;
+  background: var(--color-canvas);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.work-project-dialog.journal-dialog {
+  --journal-bar: calc(var(--target-min) + var(--space-4) * 2);
+  --journal-stage: min(100% - var(--page-gutter) * 2, (100svh - var(--journal-bar) - var(--space-12)) * 16 / 9);
+  width: 100%;
+  min-height: 100svh;
+  max-height: 100svh;
+  padding-top: var(--journal-bar);
+  border: 0;
+  border-radius: 0;
+  background: var(--color-canvas);
+  box-shadow: none;
+}
+
+.journal-dialog .work-project-dialog__media {
+  width: var(--journal-stage);
+  margin: 0 auto;
+}
+
+.journal-dialog .work-project-dialog__body {
+  width: var(--journal-stage);
+  margin: 0 auto;
+  padding-inline: 0;
+}
+
+.journal-dialog .morphing-dialog__close {
+  position: fixed;
+}
+
+.journal-dialog__player {
   position: absolute;
+  z-index: 1;
   inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
+  background: var(--ds-black);
+}
+
+@media (max-width: 700px) {
+  .work-project-dialog.journal-dialog {
+    --journal-stage: 100%;
+  }
+
+  .journal-dialog .work-project-dialog__body {
+    padding-inline: var(--page-gutter);
+  }
 }
 
 .journal-dialog__text {
