@@ -98,7 +98,8 @@ function readPost(file: string): JournalPost {
 
   const date = toIsoDate(data.date, file);
   const body = content.trim();
-  const hasPage = body !== "";
+  // Every post has its own page; the body text is optional.
+  const hasPage = true;
 
   return {
     slug,
@@ -115,9 +116,9 @@ function readPost(file: string): JournalPost {
     videoId,
     excerpt: requireString(data, "excerpt", file),
     featured: data.featured === true,
-    bodyHtml: hasPage ? (marked.parse(body, { async: false }) as string) : "",
+    bodyHtml: body ? (marked.parse(body, { async: false }) as string) : "",
     hasPage,
-    href: hasPage ? `/journal/${slug}` : youtube,
+    href: `/journal/${slug}`,
     thumbnail: getThumbnail(videoId),
   };
 }

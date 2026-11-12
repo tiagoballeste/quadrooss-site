@@ -1,19 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { ViewTransition, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "motion/react";
-import {
-  MorphingDialog,
-  MorphingDialogClose,
-  MorphingDialogContainer,
-  MorphingDialogContent,
-  MorphingDialogDescription,
-  MorphingDialogImage,
-  MorphingDialogSubtitle,
-  MorphingDialogTitle,
-  MorphingDialogTrigger,
-} from "@/components/core/morphing-dialog";
-import { TransitionLink } from "@/components/page-transition";
+import Link from "next/link";
+import { journalCoverName } from "@/lib/journal-names";
 import {
   CARD_LAYOUT_TRANSITION,
   CARD_VARIANTS,
@@ -22,8 +12,9 @@ import {
 } from "@/components/core/catalog-motion";
 
 /*
- * Journal catalog. Same rail, filter, grid motion and morphing dialog as the
- * Work catalog (work-projects-grid.tsx); only the content and the player differ.
+ * Journal catalog. Same rail, filter and grid motion as the Work catalog
+ * (work-projects-grid.tsx). A card opens the post page, and its cover morphs
+ * into the cover there (React <ViewTransition>, see journal/[slug]/page.tsx).
  */
 
 export type JournalItem = {
@@ -54,13 +45,22 @@ const FILTERS: Array<{ id: Filter; label: string }> = [
   { id: "set", label: "Sets" },
 ];
 
+let arrivalTimer = 0;
+
+function markJournalArrival() {
+  const root = document.documentElement;
+  root.dataset.journalArrival = "";
+  window.clearTimeout(arrivalTimer);
+  arrivalTimer = window.setTimeout(() => delete root.dataset.journalArrival, 2000);
+}
+
 function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean }) {
   const resetTilt = useCallback((element: HTMLElement) => {
     element.style.setProperty("--work-card-rotate-x", "0deg");
     element.style.setProperty("--work-card-rotate-y", "0deg");
   }, []);
 
-  const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+  const handlePointerMove = (event: PointerEvent<HTMLAnchorElement>) => {
     if (event.pointerType === "touch") return;
     const element = event.currentTarget;
     const bounds = element.getBoundingClientRect();
@@ -70,26 +70,26 @@ function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean })
     element.style.setProperty("--work-card-rotate-y", `${x * -8}deg`);
   };
 
-  const facts = [
-    { label: "Data", value: item.dateLabel },
-    { label: "Duração", value: item.duration },
-    item.place ? { label: "Lugar", value: item.place } : null,
-    item.series ? { label: "Série", value: item.series } : null,
-    item.credit ? { label: "Com", value: item.credit } : null,
-  ].filter((fact): fact is { label: string; value: string } => fact !== null);
-
   return (
-    <MorphingDialog layoutId={`journal-post-${item.videoId}`} transition={{ type: "spring", bounce: 0.05, duration: 0.34 }}>
-      <MorphingDialogTrigger
-        aria-label={`${item.title}, abrir post`}
-        className="work-project-card journal-project-card"
-        onBlur={(event) => resetTilt(event.currentTarget)}
-        onPointerLeave={(event) => resetTilt(event.currentTarget)}
-        onPointerMove={handlePointerMove}
-      >
-        <span className="work-project-card__media">
+    <Link
+      aria-label={`${item.title}, abrir post`}
+      className="work-project-card journal-project-card"
+      href={item.pageHref}
+      transitionTypes={["journal-open"]}
+      onBlur={(event) => resetTilt(event.currentTarget)}
+      onClick={(event) => {
+        // Flatten the tilt before the browser snapshots the cover, and mark the
+        // arrival so the post page plays its entrance (see globals.css).
+        resetTilt(event.currentTarget);
+        markJournalArrival();
+      }}
+      onPointerLeave={(event) => resetTilt(event.currentTarget)}
+      onPointerMove={handlePointerMove}
+    >
+      <span className="work-project-card__media">
+        <ViewTransition name={journalCoverName(item.slug)} share="journal-morph" default="none">
           <span className="work-project-card__image-zoom">
-            <MorphingDialogImage
+            <img
               alt={`Capa de ${item.title}`}
               decoding="async"
               fetchPriority={eager ? "high" : "auto"}
@@ -99,85 +99,14 @@ function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean })
               srcSet={item.thumbnail.srcSet ?? undefined}
             />
           </span>
-          <span className="work-project-card__glow" aria-hidden="true" />
-        </span>
-        <span className="work-project-card__meta">
-          <strong>{item.title}</strong>
-          <small>{item.subtitle}</small>
-        </span>
-      </MorphingDialogTrigger>
-
-      <MorphingDialogContainer className="journal-dialog-overlay">
-        <MorphingDialogContent className="work-project-dialog journal-dialog" data-lenis-prevent>
-          <div className="work-project-dialog__media">
-            <MorphingDialogImage
-              alt=""
-              aria-hidden="true"
-              className="work-project-dialog__poster"
-              src={item.thumbnail.src}
-              srcSet={item.thumbnail.srcSet ?? undefined}
-            />
-            {/* The Journal uses YouTube's own player; Work keeps the custom one. */}
-            <iframe
-              className="journal-dialog__player"
-              src={`https://www.youtube-nocookie.com/embed/${item.videoId}?autoplay=1&rel=0&playsinline=1`}
-              title={item.title}
-              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-              allowFullScreen
-            />
-          </div>
-
-          <div className="work-project-dialog__body">
-            <div className="work-project-dialog__heading">
-              <MorphingDialogTitle className="work-project-dialog__title">{item.title}</MorphingDialogTitle>
-              <MorphingDialogSubtitle className="work-project-dialog__subtitle">{item.subtitle}</MorphingDialogSubtitle>
-            </div>
-
-            <MorphingDialogDescription
-              className="work-project-dialog__description"
-              disableLayoutAnimation
-              variants={{
-                initial: { opacity: 0, y: 28 },
-                animate: {
-                  opacity: 1,
-                  y: 0,
-                  transition: { delay: 0.16, duration: 0.42, ease: [0.22, 1, 0.36, 1] },
-                },
-                exit: { opacity: 0, y: 18, transition: { duration: 0.18 } },
-              }}
-            >
-              <p className="work-project-dialog__eyebrow">{item.type === "set" ? "Sobre o set" : "Diário de bordo"}</p>
-              <div className="journal-dialog__text">
-                <p>{item.excerpt}</p>
-                {item.bodyHtml ? <div dangerouslySetInnerHTML={{ __html: item.bodyHtml }} /> : null}
-              </div>
-
-              <dl className="work-project-dialog__credits journal-dialog__facts">
-                {facts.map((fact) => (
-                  <div className="work-project-dialog__credit" key={fact.label}>
-                    <dt>{fact.label}</dt>
-                    <dd>{fact.value}</dd>
-                  </div>
-                ))}
-              </dl>
-
-              <div className="journal-dialog__links">
-                {item.hasPage ? (
-                  <TransitionLink className="journal-dialog__link" href={item.pageHref}>
-                    Abrir página do post →
-                  </TransitionLink>
-                ) : null}
-                <a className="journal-dialog__link" href={item.youtube} rel="noreferrer" target="_blank">
-                  Ver no YouTube ↗
-                </a>
-              </div>
-            </MorphingDialogDescription>
-          </div>
-
-          <MorphingDialogClose className="morphing-dialog__close" />
-        </MorphingDialogContent>
-      </MorphingDialogContainer>
-    </MorphingDialog>
+        </ViewTransition>
+        <span className="work-project-card__glow" aria-hidden="true" />
+      </span>
+      <span className="work-project-card__meta">
+        <strong>{item.title}</strong>
+        <small>{item.subtitle}</small>
+      </span>
+    </Link>
   );
 }
 

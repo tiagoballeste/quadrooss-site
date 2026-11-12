@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ViewTransition } from "react";
 import { CargoNav } from "@/components/cargo/cargo-shell";
 import { JournalCard } from "@/components/journal-card";
 import { JournalCta } from "@/components/journal-cta";
@@ -14,6 +15,7 @@ import {
   seriesAnchor,
   type JournalPost,
 } from "@/lib/journal";
+import { journalCoverName } from "@/lib/journal-names";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -75,14 +77,18 @@ export default async function JournalPostPage({ params }: Props) {
         </TransitionLink>
 
         <header className="journal-post__opening">
-          <img
-            alt=""
-            className="journal-post__cover"
-            decoding="async"
-            sizes="(max-width: 900px) 100vw, 50vw"
-            src={post.thumbnail.src}
-            srcSet={post.thumbnail.srcSet ?? undefined}
-          />
+          {/* Same name as the Journal card: the cover flies in from the grid. */}
+          <ViewTransition name={journalCoverName(post.slug)} share="journal-morph" default="none">
+            <img
+              alt=""
+              className="journal-post__cover"
+              decoding="async"
+              fetchPriority="high"
+              sizes="(max-width: 900px) 100vw, 50vw"
+              src={post.thumbnail.src}
+              srcSet={post.thumbnail.srcSet ?? undefined}
+            />
+          </ViewTransition>
           <div className="journal-post__intro">
             <p className="journal-post__kicker">
               <span>{kicker}</span>
