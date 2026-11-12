@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { logos } from "@/components/cargo/logo-loop";
+import { logos } from "@/components/logo-loop";
 
 // Internal tool for checking logo balance. Kept reachable but out of search results.
 export const metadata: Metadata = {

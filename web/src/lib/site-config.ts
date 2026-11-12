@@ -1,5 +1,7 @@
 export const siteConfig = {
   name: "Quadrooss",
+  /** Home page and share title. */
+  title: "Quadrooss · Filmmaker & Creative Director",
   // Public address. Change here when a custom domain is connected on Cloudflare Pages.
   url: "https://quadrooss-site.pages.dev",
   description:

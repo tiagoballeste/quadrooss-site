@@ -1,4 +1,4 @@
-import { CargoNav } from "@/components/cargo/cargo-shell";
+import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { WorkProjectsGrid } from "@/components/work-projects-grid";
 import type { Locale } from "@/lib/i18n";
@@ -8,8 +8,8 @@ export const workMetadata = (locale: Locale) => pageMetadata({ locale, path: "/w
 
 export function WorkView() {
   return (
-    <main className="cargo-page work-index-page">
-      <CargoNav />
+    <main className="site-page work-index-page">
+      <SiteNav />
       <WorkProjectsGrid />
       <SiteFooter />
     </main>

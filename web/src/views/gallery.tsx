@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { CargoNav } from "@/components/cargo/cargo-shell";
+import { SiteNav } from "@/components/site-nav";
 import { GalleryPhotoGrid } from "@/components/gallery-photo-grid";
 import { TransitionLink } from "@/components/page-transition";
 import { SiteFooter } from "@/components/site-footer";
@@ -29,8 +29,8 @@ export async function GalleryView({ slug, locale }: { slug: string; locale: Loca
   const ui = getUi(locale);
 
   return (
-    <main className="cargo-page gallery-page">
-      <CargoNav />
+    <main className="site-page gallery-page">
+      <SiteNav />
 
       <header className="gallery-hero">
         <TransitionLink className="gallery-hero__back" href="/archive#gallery">

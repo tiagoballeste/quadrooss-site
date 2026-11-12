@@ -8,16 +8,19 @@ type PageMetadataInput = {
   /** The page's Portuguese path, e.g. "/work". */
   path: string;
   title?: string;
+  /** A full title that skips the "· Quadrooss" template (the home page). */
+  absoluteTitle?: string;
   description?: string;
   images?: NonNullable<Metadata["openGraph"]>["images"];
   type?: "website" | "article";
 };
 
 /** Title, description, hreflang alternates and Open Graph for one page. */
-export function pageMetadata({ locale, path, title, description, images, type = "website" }: PageMetadataInput): Metadata {
+export function pageMetadata({ locale, path, title, absoluteTitle, description, images, type = "website" }: PageMetadataInput): Metadata {
   const text = description ?? getUi(locale).meta.description;
+  const shareTitle = absoluteTitle ?? (title ? `${title} — ${siteConfig.name}` : undefined);
   return {
-    ...(title ? { title } : {}),
+    ...(absoluteTitle ? { title: { absolute: absoluteTitle } } : title ? { title } : {}),
     description: text,
     alternates: languageAlternates(path, locale),
     openGraph: {
@@ -25,7 +28,7 @@ export function pageMetadata({ locale, path, title, description, images, type = 
       siteName: siteConfig.name,
       locale: OG_LOCALE[locale],
       alternateLocale: OG_LOCALE[locale === "en" ? "pt" : "en"],
-      ...(title ? { title: `${title} — ${siteConfig.name}` } : {}),
+      ...(shareTitle ? { title: shareTitle } : {}),
       description: text,
       ...(images ? { images } : {}),
     },

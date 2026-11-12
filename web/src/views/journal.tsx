@@ -1,4 +1,4 @@
-import { CargoNav } from "@/components/cargo/cargo-shell";
+import { SiteNav } from "@/components/site-nav";
 import { JournalCta } from "@/components/journal-cta";
 import { JournalIndex, type JournalItem } from "@/components/journal-index";
 import { SiteFooter } from "@/components/site-footer";
@@ -51,8 +51,8 @@ export function JournalView({ locale }: { locale: Locale }) {
   ];
 
   return (
-    <main className="cargo-page work-index-page journal-page">
-      <CargoNav />
+    <main className="site-page work-index-page journal-page">
+      <SiteNav />
       <JournalIndex items={ordered.map(toItem)} />
       <JournalCta />
       <SiteFooter />

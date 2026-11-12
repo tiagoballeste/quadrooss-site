@@ -1,6 +1,6 @@
-import { AboutWordReveal } from "@/components/cargo/about-word-reveal";
-import { ContactWizard } from "@/components/cargo/contact-wizard";
-import { OptionWheel } from "@/components/cargo/option-wheel";
+import { AboutWordReveal } from "@/components/about-word-reveal";
+import { ContactWizard } from "@/components/contact-wizard";
+import { OptionWheel } from "@/components/option-wheel";
 import { HomeHeader } from "@/components/home-header";
 import { HomeWorkShowcase } from "@/components/home-work-showcase";
 import { SiteFooter } from "@/components/site-footer";
@@ -8,15 +8,17 @@ import { getUi } from "@/i18n/ui";
 import { getContentStats } from "@/lib/content-stats";
 import type { Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/page-metadata";
+import { siteConfig } from "@/lib/site-config";
 
-export const homeMetadata = (locale: Locale) => pageMetadata({ locale, path: "/" });
+export const homeMetadata = (locale: Locale) =>
+  pageMetadata({ locale, path: "/", absoluteTitle: siteConfig.title });
 
 export function HomeView({ locale }: { locale: Locale }) {
   const stats = getContentStats();
   const ui = getUi(locale);
 
   return (
-    <main className="cargo-home">
+    <main className="site-home">
       <HomeHeader />
       <OptionWheel />
 

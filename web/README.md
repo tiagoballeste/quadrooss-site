@@ -1,6 +1,6 @@
 # Quadrooss — reconstrução independente
 
-Aplicação independente em Next.js/React. A exportação original do Cargo permanece nas pastas `../cargo`, `../snapshot` e `../media` como fonte de conteúdo e referência.
+Aplicação em Next.js/React, exportada como site estático. As fotos do Archive vêm de `../media`.
 
 ## Desenvolvimento
 
@@ -77,7 +77,7 @@ Onde ficam os textos:
 - Journal: `content/journal/en/<mesmo slug>.md` com `title`, `excerpt`, `place`, `series` e o texto traduzido. O que faltar usa o português.
 - Galerias: `title_en`, `descriptor_en` e `intro_en` no próprio arquivo da galeria.
 - Créditos do Work: os cargos passam por `src/i18n/credits.ts`.
-- Página Contact (scripts do Cargo): `src/i18n/contact-page.ts`.
+- Página Contact: `src/views/contact.tsx` (título) e `src/components/contact/project-form.tsx` (formulário).
 - About: `src/views/about.tsx`.
 
 Cada página tem a sua versão em `src/views/`, usada pelas rotas em português (`src/app/<página>`) e em inglês (`src/app/en/<página>`).

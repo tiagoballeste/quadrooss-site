@@ -1,5 +1,5 @@
 {
   "version": 1,
   "include": ["/*"],
-  "exclude": ["/_next/*", "/media/*", "/images/*", "/motion/*", "/robots.txt", "/sitemap.xml", "/icon.png", "/apple-icon.png", "/opengraph-image.jpg"]
+  "exclude": ["/_next/*", "/media/*", "/images/*", "/robots.txt", "/sitemap.xml", "/icon.png", "/apple-icon.png", "/opengraph-image.jpg"]
 }

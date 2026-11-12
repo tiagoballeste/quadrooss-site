@@ -1,182 +1,103 @@
 "use client";
 
 import { gsap } from "gsap";
-import {
-  Fragment,
-  type CSSProperties,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
-type PageLoaderProps = {
-  enabled: boolean;
-};
+/*
+ * Intro loader, drawn in code (it used to be a 1920×1080 animated WebP at
+ * ~22 fps with a full-screen blur re-rendered every frame):
+ *
+ *   0.17s  the inner brackets appear and open up
+ *   0.30s  the outer brackets and the letters come in
+ *   0.50s  the wordmark slowly grows
+ *   1.95s  the white panel wipes up, the blurred site underneath sharpens
+ *   2.75s  done
+ *
+ * Only transform, opacity and clip-path are animated, so it stays on the GPU.
+ * The panel is server-rendered, so the page never flashes before it.
+ */
 
-const MAX_SITE_BLUR = 20;
-const BLUR_START_PROGRESS = 0.58;
-const BLUR_END_PROGRESS = 0.82;
-const FALLBACK_TIMEOUT = 8000;
-const LOADER_DURATION = 3300;
+const WORD = "quadrooss";
+const WIPE_AT = 1.95;
+
+type PageLoaderProps = { enabled: boolean };
 
 export function PageLoader({ enabled }: PageLoaderProps) {
   const [visible, setVisible] = useState(enabled);
-  const [ready, setReady] = useState(false);
-  const loaderRef = useRef<HTMLDivElement>(null);
-  const siteBlurRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const revealTimeline = useRef<gsap.core.Timeline | null>(null);
-  const monitorFrame = useRef<number | null>(null);
-  const startedAt = useRef<number | null>(null);
-  const finished = useRef(false);
-
-  const complete = useCallback(() => {
-    document.documentElement.classList.remove("has-page-loader");
-    setVisible(false);
-  }, []);
-
-  const finish = useCallback(() => {
-    if (finished.current) return;
-    finished.current = true;
-    siteBlurRef.current?.style.setProperty("--page-loader-site-blur", "0px");
-    complete();
-  }, [complete]);
-
-  const failOpen = useCallback(() => {
-    if (finished.current) return;
-    finished.current = true;
-    const loader = loaderRef.current;
-    const siteBlur = siteBlurRef.current;
-
-    if (!loader) {
-      complete();
-      return;
-    }
-
-    loader.classList.add("is-failing");
-    siteBlur?.classList.add("is-failing");
-
-    revealTimeline.current = gsap.timeline({ onComplete: complete });
-    revealTimeline.current.to(
-      loader,
-      { opacity: 0, duration: 0.35, ease: "power2.out" },
-      0,
-    );
-
-    if (siteBlur) {
-      revealTimeline.current.to(
-        siteBlur,
-        {
-          "--page-loader-site-blur": "0px",
-          opacity: 0,
-          duration: 0.35,
-          ease: "power2.out",
-        },
-        0,
-      );
-    }
-  }, [complete]);
-
-  const syncBlur = useCallback((progress: number) => {
-    const siteBlur = siteBlurRef.current;
-
-    if (!siteBlur) return;
-
-    const revealProgress = Math.min(
-      1,
-      Math.max(
-        0,
-        (progress - BLUR_START_PROGRESS) /
-          (BLUR_END_PROGRESS - BLUR_START_PROGRESS),
-      ),
-    );
-    const easedProgress = revealProgress * revealProgress * (3 - 2 * revealProgress);
-    const blur = MAX_SITE_BLUR * (1 - easedProgress);
-
-    siteBlur.style.setProperty("--page-loader-site-blur", `${blur.toFixed(2)}px`);
-  }, []);
-
-  const handleImageLoad = useCallback(() => {
-    if (startedAt.current !== null || finished.current) return;
-    startedAt.current = window.performance.now();
-    loaderRef.current?.classList.add("is-playing");
-
-    const monitor = (now: number) => {
-      if (startedAt.current === null || finished.current) return;
-      const progress = Math.min(1, (now - startedAt.current) / LOADER_DURATION);
-      syncBlur(progress);
-      if (progress >= 1) {
-        finish();
-        return;
-      }
-      monitorFrame.current = window.requestAnimationFrame(monitor);
-    };
-
-    monitorFrame.current = window.requestAnimationFrame(monitor);
-  }, [finish, syncBlur]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const blurRef = useRef<HTMLDivElement>(null);
+  const markRef = useRef<HTMLDivElement>(null);
+  const wordRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (!enabled) return;
+    const panel = panelRef.current;
+    const blur = blurRef.current;
+    const mark = markRef.current;
+    const word = wordRef.current;
+    if (!panel || !blur || !mark || !word) return;
 
-    setReady(true);
+    const done = () => {
+      document.documentElement.classList.remove("has-page-loader");
+      setVisible(false);
+    };
 
-    const fallback = window.setTimeout(failOpen, FALLBACK_TIMEOUT);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const tween = gsap.to([panel, blur], { opacity: 0, duration: 0.4, delay: 0.3, onComplete: done });
+      return () => {
+        tween.kill();
+      };
+    }
+
+    const brackets = (ring: number) => mark.querySelectorAll(`[data-ring="${ring}"]`);
+    const letters = word.querySelectorAll("span");
+    const wordWidth = word.scrollWidth;
+
+    const timeline = gsap.timeline({ onComplete: done });
+    timeline
+      .set(mark, { autoAlpha: 1 })
+      // The inner pair appears side by side, then opens to make room for the word.
+      .fromTo(brackets(1), { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "none" }, 0.17)
+      .fromTo(word, { width: 0 }, { width: wordWidth, duration: 0.42, ease: "power3.out" }, 0.2)
+      .fromTo(brackets(2), { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "none" }, 0.3)
+      .fromTo(brackets(3), { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "none" }, 0.4)
+      .fromTo(
+        letters,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.08, ease: "none", stagger: { each: 0.025, from: "random" } },
+        0.34,
+      )
+      // The wordmark grows the whole time it is on screen.
+      .fromTo(mark, { scale: 0.62 }, { scale: 1, duration: WIPE_AT - 0.17, ease: "power1.inOut" }, 0.17)
+      // The panel wipes up from the bottom while the site comes into focus.
+      .to(panel, { clipPath: "inset(0% 0% 100% 0%)", duration: 0.56, ease: "power3.inOut" }, WIPE_AT)
+      .to(blur, { opacity: 0, duration: 0.8, ease: "sine.out" }, WIPE_AT);
 
     return () => {
-      window.clearTimeout(fallback);
-      if (monitorFrame.current !== null) {
-        window.cancelAnimationFrame(monitorFrame.current);
-      }
-      revealTimeline.current?.kill();
+      timeline.kill();
     };
-  }, [enabled, failOpen]);
-
-  useEffect(() => {
-    if (ready && imageRef.current?.complete && imageRef.current.naturalWidth > 0) {
-      handleImageLoad();
-    }
-  }, [handleImageLoad, ready]);
+  }, [enabled]);
 
   if (!visible) return null;
 
   return (
-    <Fragment>
-      <div
-        ref={siteBlurRef}
-        className="page-loader__site-blur"
-        aria-hidden="true"
-        style={
-          {
-            backdropFilter: "blur(var(--page-loader-site-blur))",
-            WebkitBackdropFilter: "blur(var(--page-loader-site-blur))",
-          } as CSSProperties
-        }
-      />
-      <div
-        ref={loaderRef}
-        className="page-loader"
-        aria-label="Carregando o site"
-      >
-        {ready && (
-          <picture className="page-loader__picture">
-            <source
-              media="(max-width: 700px)"
-              srcSet="/motion/page-loader-alpha-mobile.webp"
-              type="image/webp"
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              ref={imageRef}
-              className="page-loader__image"
-              src="/motion/page-loader-alpha.webp"
-              alt=""
-              onLoad={handleImageLoad}
-              onError={failOpen}
-            />
-          </picture>
-        )}
+    <>
+      <div ref={blurRef} className="page-loader__site-blur" aria-hidden="true" />
+      <div ref={panelRef} className="page-loader" role="status" aria-label="Quadrooss">
+        <div ref={markRef} className="page-loader__mark" aria-hidden="true">
+          <span data-ring="3">(</span>
+          <span data-ring="2">(</span>
+          <span data-ring="1">(</span>
+          <span ref={wordRef} className="page-loader__word">
+            {WORD.split("").map((letter, index) => (
+              <span key={index}>{letter}</span>
+            ))}
+          </span>
+          <span data-ring="1">)</span>
+          <span data-ring="2">)</span>
+          <span data-ring="3">)</span>
+        </div>
       </div>
-    </Fragment>
+    </>
   );
 }

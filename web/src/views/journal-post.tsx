@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ViewTransition } from "react";
-import { CargoNav } from "@/components/cargo/cargo-shell";
+import { SiteNav } from "@/components/site-nav";
 import { JournalCard } from "@/components/journal-card";
 import { JournalCta } from "@/components/journal-cta";
 import { JournalPlayer } from "@/components/journal-player";
@@ -67,8 +67,8 @@ export function JournalPostView({ slug, locale }: { slug: string; locale: Locale
   const episodeLabel = post.episode && series.length ? `Ep. ${String(post.episode).padStart(2, "0")} / ${String(series.length).padStart(2, "0")}` : null;
 
   return (
-    <main className="cargo-page journal-page journal-post-page">
-      <CargoNav />
+    <main className="site-page journal-page journal-post-page">
+      <SiteNav />
 
       <article className="journal-post">
         <TransitionLink className="journal-post__back" href="/journal">

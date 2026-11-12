@@ -1,5 +1,5 @@
 import { BrandLogo } from "@/components/brand-logo";
-import { CargoNav } from "@/components/cargo/cargo-shell";
+import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { getUi } from "@/i18n/ui";
 import type { Locale } from "@/lib/i18n";
@@ -47,8 +47,8 @@ export function AboutView({ locale }: { locale: Locale }) {
   const copy = COPY[locale];
 
   return (
-    <main className="cargo-page about-page">
-      <CargoNav />
+    <main className="site-page about-page">
+      <SiteNav />
       <section className="ab-hero">
         <BrandLogo className="ab-hero-logo" priority />
         <div className="ab-hero-grad" />
