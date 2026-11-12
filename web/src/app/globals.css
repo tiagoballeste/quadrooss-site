@@ -3696,6 +3696,15 @@ html.is-page-transition {
   background: #000;
 }
 
+/* Lenis pauses during the transition and its lenis-stopped class clips the
+   page, which hides the scrollbar and widens the layout by its width. Keep the
+   page's own overflow so the scrollbar stays and nothing shifts; Lenis still
+   blocks wheel scrolling while it is stopped. */
+html.is-page-transition.lenis.lenis-stopped {
+  overflow: visible;
+  overflow-x: clip;
+}
+
 html.is-page-transition::view-transition-group(root) {
   animation-duration: 1.1s;
 }
