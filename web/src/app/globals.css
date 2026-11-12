@@ -3681,51 +3681,37 @@ a {
   opacity: 1;
 }
 
-.iris-transition {
-  position: fixed;
-  z-index: 1000001;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: all;
-  isolation: isolate;
+/* Page transition (see page-transition.tsx): the old page slides up and fades
+   out, then the new one rises from below and fades in. Timings and easing
+   match the Maxima Michaels reference. */
+html.is-page-transition {
+  background: var(--color-canvas);
 }
 
-.iris-transition__circle {
-  --iris-x: 50vw;
-  --iris-y: 50vh;
-  --iris-radius: 100vmax;
-  position: fixed;
-  inset: 0;
-  background: #fff;
-  clip-path: circle(0px at var(--iris-x) var(--iris-y));
-  will-change: clip-path;
+html.is-page-transition::view-transition-group(root) {
+  animation-duration: 1.1s;
 }
 
-.iris-transition.is-entering .iris-transition__circle {
-  animation: iris-cover 0.46s cubic-bezier(0.32, 0.72, 0, 1) both;
+html.is-page-transition::view-transition-old(root) {
+  animation: 0.6s cubic-bezier(0.73, 0, 0.33, 1) both page-out;
 }
 
-.iris-transition.is-covered .iris-transition__circle {
-  clip-path: circle(var(--iris-radius) at var(--iris-x) var(--iris-y));
+html.is-page-transition::view-transition-new(root) {
+  animation: 0.6s cubic-bezier(0.73, 0, 0.33, 1) 0.5s both page-in;
 }
 
-.iris-transition.is-leaving .iris-transition__circle {
-  animation: iris-reveal 0.5s cubic-bezier(0.32, 0.72, 0, 1) both;
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-30%);
+  }
 }
 
-.iris-transition.is-reduced .iris-transition__circle {
-  clip-path: inset(0);
-  animation: none;
-}
-
-@keyframes iris-cover {
-  from { clip-path: circle(0px at var(--iris-x) var(--iris-y)); }
-  to { clip-path: circle(var(--iris-radius) at var(--iris-x) var(--iris-y)); }
-}
-
-@keyframes iris-reveal {
-  from { clip-path: circle(var(--iris-radius) at var(--iris-x) var(--iris-y)); }
-  to { clip-path: circle(0px at var(--iris-x) var(--iris-y)); }
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(30%);
+  }
 }
 
 .page-loader {

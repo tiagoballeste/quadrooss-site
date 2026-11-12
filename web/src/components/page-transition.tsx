@@ -5,81 +5,28 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   type ComponentProps,
-  type CSSProperties,
   type MouseEvent,
   type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useRef,
-  useState,
 } from "react";
 
-type TransitionPhase = "idle" | "entering" | "covered" | "leaving";
-
-type IrisOrigin = {
-  x: number;
-  y: number;
-};
-
-type StartTransition = (href: string, origin: IrisOrigin) => boolean;
+type StartTransition = (href: string) => boolean;
 
 const PageTransitionContext = createContext<StartTransition | null>(null);
 
-function IrisCurtain({
-  phase,
-  origin,
-  reducedMotion,
-  onCovered,
-  onRevealed,
-}: {
-  phase: Exclude<TransitionPhase, "idle">;
-  origin: IrisOrigin;
-  reducedMotion: boolean;
-  onCovered: () => void;
-  onRevealed: () => void;
-}) {
-  const farthestX = Math.max(origin.x, window.innerWidth - origin.x);
-  const farthestY = Math.max(origin.y, window.innerHeight - origin.y);
-  const radius = Math.ceil(Math.hypot(farthestX, farthestY)) + 4;
+/*
+ * Page transition, after the Maxima Michaels reference (Framer): the browser's
+ * View Transition API snapshots the old page and the new one; the old slides up
+ * 30% and fades out (600ms), the new comes up from 30% below and fades in
+ * (600ms, starting at 500ms). Both use cubic-bezier(0.73, 0, 0.33, 1).
+ * The keyframes live in globals.css under html.is-page-transition.
+ * Browsers without the API, and reduced motion, navigate without animation.
+ */
 
-  useEffect(() => {
-    if (!reducedMotion) return;
-
-    if (phase === "entering") {
-      const timer = window.setTimeout(onCovered, 100);
-      return () => window.clearTimeout(timer);
-    }
-
-    if (phase === "leaving") {
-      const timer = window.setTimeout(onRevealed, 100);
-      return () => window.clearTimeout(timer);
-    }
-  }, [onCovered, onRevealed, phase, reducedMotion]);
-
-  return (
-    <div
-      className={`iris-transition is-${phase}${reducedMotion ? " is-reduced" : ""}`}
-      aria-hidden="true"
-    >
-      <div
-        className="iris-transition__circle"
-        style={
-          {
-            "--iris-x": `${origin.x}px`,
-            "--iris-y": `${origin.y}px`,
-            "--iris-radius": `${radius}px`,
-          } as CSSProperties
-        }
-        onAnimationEnd={(event) => {
-          if (event.target !== event.currentTarget) return;
-          if (event.animationName === "iris-cover") onCovered();
-          if (event.animationName === "iris-reveal") onRevealed();
-        }}
-      />
-    </div>
-  );
-}
+const COMMIT_TIMEOUT = 4000;
 
 function getPathname(href: string) {
   return new URL(href, window.location.href).pathname;
@@ -88,93 +35,61 @@ function getPathname(href: string) {
 export function PageTransitionProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [phase, setPhase] = useState<TransitionPhase>("idle");
-  const [origin, setOrigin] = useState<IrisOrigin>({ x: 0, y: 0 });
-  const [reducedMotion, setReducedMotion] = useState(false);
-  const phaseRef = useRef<TransitionPhase>("idle");
-  const targetRef = useRef<string | null>(null);
-  const sourcePathRef = useRef(pathname);
+  const busyRef = useRef(false);
+  const commitRef = useRef<{ path: string; resolve: () => void } | null>(null);
 
-  const updatePhase = useCallback((nextPhase: TransitionPhase) => {
-    phaseRef.current = nextPhase;
-    setPhase(nextPhase);
-  }, []);
-
-  const finishTransition = useCallback(() => {
-    updatePhase("idle");
-    targetRef.current = null;
-    document.documentElement.classList.remove("is-route-transitioning");
-    window.dispatchEvent(new Event("quad:transition-end"));
-  }, [updatePhase]);
+  // The new route has rendered: put it at the top and let the browser take the
+  // "after" snapshot.
+  useEffect(() => {
+    const pending = commitRef.current;
+    if (!pending || pending.path !== pathname) return;
+    commitRef.current = null;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    pending.resolve();
+  }, [pathname]);
 
   const startTransition = useCallback<StartTransition>(
-    (href, clickOrigin) => {
-      if (phaseRef.current !== "idle") return false;
-
+    (href) => {
+      if (busyRef.current) return false;
       const targetPath = getPathname(href);
       if (targetPath === pathname) return false;
+      if (typeof document.startViewTransition !== "function") return false;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
 
-      sourcePathRef.current = pathname;
-      targetRef.current = href;
-      setOrigin(clickOrigin);
-      setReducedMotion(
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-      );
-      document.documentElement.classList.add("is-route-transitioning");
+      busyRef.current = true;
+      const root = document.documentElement;
+      root.classList.add("is-page-transition");
       window.dispatchEvent(new Event("quad:transition-start"));
-      router.prefetch(href);
-      updatePhase("entering");
+
+      const committed = new Promise<void>((resolve) => {
+        const timer = window.setTimeout(resolve, COMMIT_TIMEOUT);
+        commitRef.current = {
+          path: targetPath,
+          resolve: () => {
+            window.clearTimeout(timer);
+            resolve();
+          },
+        };
+      });
+
+      const transition = document.startViewTransition(() => {
+        router.push(href, { scroll: false });
+        return committed;
+      });
+
+      transition.finished.finally(() => {
+        busyRef.current = false;
+        commitRef.current = null;
+        root.classList.remove("is-page-transition");
+        window.dispatchEvent(new Event("quad:transition-end"));
+      });
+
       return true;
     },
-    [pathname, router, updatePhase],
+    [pathname, router],
   );
 
-  const navigateWhenCovered = useCallback(() => {
-    const target = targetRef.current;
-    if (!target || phaseRef.current !== "entering") return;
-
-    updatePhase("covered");
-    router.push(target, { scroll: false });
-  }, [router, updatePhase]);
-
-  useEffect(() => {
-    if (phaseRef.current !== "covered" || pathname === sourcePathRef.current) {
-      return;
-    }
-
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-    const frame = window.requestAnimationFrame(() => updatePhase("leaving"));
-    return () => window.cancelAnimationFrame(frame);
-  }, [pathname, updatePhase]);
-
-  useEffect(() => {
-    if (phase === "idle") return;
-
-    const failSafe = window.setTimeout(() => {
-      if (phaseRef.current === "covered" && targetRef.current) {
-        window.location.assign(targetRef.current);
-        return;
-      }
-      finishTransition();
-    }, 5000);
-
-    return () => window.clearTimeout(failSafe);
-  }, [finishTransition, phase]);
-
-  return (
-    <PageTransitionContext.Provider value={startTransition}>
-      {children}
-      {phase !== "idle" && (
-        <IrisCurtain
-          phase={phase}
-          origin={origin}
-          reducedMotion={reducedMotion}
-          onCovered={navigateWhenCovered}
-          onRevealed={finishTransition}
-        />
-      )}
-    </PageTransitionContext.Provider>
-  );
+  return <PageTransitionContext.Provider value={startTransition}>{children}</PageTransitionContext.Provider>;
 }
 
 type TransitionLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
@@ -210,14 +125,7 @@ export function TransitionLink({
     const url = new URL(href, window.location.href);
     if (url.origin !== window.location.origin) return;
 
-    const rect = event.currentTarget.getBoundingClientRect();
-    const isKeyboardClick = event.detail === 0;
-    const clickOrigin = {
-      x: isKeyboardClick ? rect.left + rect.width / 2 : event.clientX,
-      y: isKeyboardClick ? rect.top + rect.height / 2 : event.clientY,
-    };
-
-    if (startTransition(href, clickOrigin)) event.preventDefault();
+    if (startTransition(href)) event.preventDefault();
   };
 
   return (

@@ -87,7 +87,7 @@ function TiltJournalCard({ item, eager }: { item: JournalItem; eager: boolean })
       onPointerMove={handlePointerMove}
     >
       <span className="work-project-card__media">
-        <ViewTransition name={journalCoverName(item.slug)} share="journal-morph" default="none">
+        <ViewTransition name={journalCoverName(item.slug)} share={{ "journal-open": "journal-morph", default: "none" }} default="none">
           <span className="work-project-card__image-zoom">
             <img
               alt={`Capa de ${item.title}`}

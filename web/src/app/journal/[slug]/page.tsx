@@ -78,7 +78,7 @@ export default async function JournalPostPage({ params }: Props) {
 
         <header className="journal-post__opening">
           {/* Same name as the Journal card: the cover flies in from the grid. */}
-          <ViewTransition name={journalCoverName(post.slug)} share="journal-morph" default="none">
+          <ViewTransition name={journalCoverName(post.slug)} share={{ "journal-open": "journal-morph", default: "none" }} default="none">
             <img
               alt=""
               className="journal-post__cover"
