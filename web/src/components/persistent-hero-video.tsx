@@ -1,5 +1,6 @@
 "use client";
 
+import { stripLocale } from "@/lib/i18n";
 import Player from "@vimeo/player";
 import { useMotionValueEvent, useReducedMotion, useScroll } from "motion/react";
 import { usePathname } from "next/navigation";
@@ -13,6 +14,7 @@ export const HERO_VIDEO_POSTER =
 
 export function PersistentHeroVideo() {
   const pathname = usePathname();
+  const isHome = stripLocale(pathname ?? "/") === "/";
   const reducedMotion = useReducedMotion();
   const { scrollY } = useScroll();
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -24,7 +26,7 @@ export function PersistentHeroVideo() {
     (scrollTop: number) => {
       const root = document.documentElement;
 
-      if (pathname !== "/" || reducedMotion) {
+      if (!isHome || reducedMotion) {
         root.style.setProperty("--hero-video-y", "0px");
         root.style.setProperty("--hero-copy-opacity", "1");
         root.style.setProperty("--hero-copy-y", "0px");
@@ -54,7 +56,7 @@ export function PersistentHeroVideo() {
         Math.max(0, 1 - statsProgress).toFixed(3),
       );
     },
-    [pathname, reducedMotion],
+    [isHome, reducedMotion],
   );
 
   useMotionValueEvent(scrollY, "change", updateHeroScroll);
@@ -127,12 +129,12 @@ export function PersistentHeroVideo() {
   }, [ensurePlayback]);
 
   useEffect(() => {
-    if (pathname === "/") ensurePlayback();
-  }, [ensurePlayback, pathname]);
+    if (isHome) ensurePlayback();
+  }, [ensurePlayback, isHome]);
 
   return (
     <div
-      className={`persistent-hero-video${pathname === "/" ? " is-visible" : ""}${hasFirstFrame ? " is-playing" : ""}`}
+      className={`persistent-hero-video${isHome ? " is-visible" : ""}${hasFirstFrame ? " is-playing" : ""}`}
       aria-hidden="true"
     >
       <div className="persistent-hero-video__media">
