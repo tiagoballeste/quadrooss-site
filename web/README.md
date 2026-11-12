@@ -11,6 +11,33 @@ npm run dev
 
 Abra `http://localhost:3000`.
 
+## Journal
+
+Cada post é um arquivo Markdown em `content/journal/`. O nome do arquivo vira o endereço (`mochilao-europeu-09.md` → `/journal/mochilao-europeu-09`). No topo vão os dados; embaixo, o texto do post.
+
+```md
+---
+title: "Uma última noite sem ter onde dormir"
+type: "vlog"              # "vlog" ou "set"
+series: "Mochilão Europeu" # opcional; agrupa os episódios no índice
+episode: 9                # opcional
+place: "Madrid"           # opcional
+credit: "Quadrooss & Icaro" # opcional, usado nos sets
+date: "2026-08-11"
+duration: "24 min"
+youtube: "https://youtu.be/gSXH2HshB7Q"
+excerpt: "Primeiro parágrafo, usado no card e na abertura do post."
+featured: true            # opcional; sem nenhum, o destaque é o post mais recente
+---
+
+Texto do post, em parágrafos.
+```
+
+- Post com texto ganha página própria. Post sem texto (como os sets) abre direto no YouTube.
+- A thumbnail vem do próprio YouTube: no build, `scripts/prepare-media.mjs` baixa a maior versão disponível pelo ID do vídeo, recorta as faixas pretas e gera WebP em `public/media/journal/`. Sem internet no build, o site usa o endereço da thumbnail no YouTube.
+- Os campos são validados no build (`src/lib/journal.ts`): faltou um obrigatório, o build para e diz em qual arquivo.
+- O formato é o que CMS baseados em Git (Pages CMS, Sveltia, Decap) editam, então dá para ligar um depois sem mudar as páginas.
+
 ## Build e deploy (Cloudflare Pages)
 
 O site é 100% estático. `npm run build` gera HTML, CSS, JS e imagens em `out/`, e o Cloudflare Pages publica essa pasta a cada push no `main`.

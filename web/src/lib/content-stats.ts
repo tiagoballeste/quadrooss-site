@@ -1,8 +1,5 @@
 import projectsData from "@/data/work/projects.json";
-import {
-  journalEmbedEntries,
-  journalLinkEntries,
-} from "@/data/journal-entries";
+import { getJournalPosts } from "@/lib/journal";
 import { getArchiveImages } from "@/lib/archive-media";
 
 function formatCount(count: number) {
@@ -11,10 +8,8 @@ function formatCount(count: number) {
 
 export function getContentStats() {
   const archiveImages = getArchiveImages();
-  const journalEntries = [...journalLinkEntries, ...journalEmbedEntries];
-  const musicEntries = journalEntries.filter(
-    (entry) => entry.category === "music",
-  );
+  const journalEntries = getJournalPosts();
+  const musicEntries = journalEntries.filter((entry) => entry.type === "set");
 
   return [
     ["WORKS", formatCount(projectsData.projects.length)],

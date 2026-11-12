@@ -13,8 +13,10 @@
   },
   "dependencies": {
     "@vimeo/player": "^2.30.4",
+    "gray-matter": "^4.0.3",
     "gsap": "latest",
     "lenis": "latest",
+    "marked": "^18.2.0",
     "motion": "^14.2.0",
     "next": "16.4.4",
     "react": "latest",
