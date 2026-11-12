@@ -7,14 +7,23 @@ import { SmoothScroll } from "@/components/smooth-scroll";
 import "lenis/dist/lenis.css";
 import "./design-system.css";
 import "./globals.css";
+import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: {
-    default: "Quadrooss",
-    template: "%s — Quadrooss",
+    default: siteConfig.name,
+    template: `%s — ${siteConfig.name}`,
   },
-  description:
-    "Direção, audiovisual, fotografia, música, moda e cultura por Pedro Quadros.",
+  description: siteConfig.description,
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: siteConfig.name,
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

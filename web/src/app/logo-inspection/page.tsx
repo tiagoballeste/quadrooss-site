@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { logos } from "@/components/cargo/logo-loop";
+
+// Internal tool for checking logo balance. Kept reachable but out of search results.
+export const metadata: Metadata = {
+  title: "Logo inspection",
+  robots: { index: false, follow: false },
+};
 
 export default function LogoInspectionPage() {
   return (

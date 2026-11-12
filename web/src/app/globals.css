@@ -1025,8 +1025,21 @@ a {
 }
 
 .msf-foot a {
+  position: relative;
   color: var(--color-text-primary);
   border-bottom: 1px solid var(--color-border-strong);
+}
+
+/* Invisible hit area: the links stay 12 px type, but a finger gets the
+   design-system minimum. They sit alone on their line, so nothing overlaps. */
+.msf-foot a::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: var(--target-min);
+  transform: translateY(-50%);
 }
 
 .msf-success {
@@ -1132,6 +1145,16 @@ a {
 .site-footer__column a:hover,
 .site-footer__column a:focus-visible {
   opacity: 0.58;
+}
+
+/* Stacked links can't borrow invisible hit area without overlapping their
+   neighbours, so on touch screens each row grows to the target minimum. */
+@media (pointer: coarse) {
+  .site-footer__column a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--target-min);
+  }
 }
 
 .site-footer__contact {

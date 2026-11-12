@@ -1,5 +1,9 @@
 export const siteConfig = {
   name: "Quadrooss",
+  // Public address. Change here when a custom domain is connected on Cloudflare Pages.
+  url: "https://quadrooss-site.pages.dev",
+  description:
+    "Direção, audiovisual, fotografia, música, moda e cultura por Pedro Quadros.",
   wordmark: "(((quadrooss)))",
   email: "cttquadrooss@gmail.com",
   phone: {
