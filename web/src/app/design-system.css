@@ -143,11 +143,6 @@
   --layer-loader: 10000;
   --layer-transition: 10001;
 
-  /* Compatibility aliases for the first Cargo reconstruction. */
-  --cargo-bg: var(--color-canvas);
-  --cargo-purple: var(--color-surface-accent);
-  --cargo-white: var(--color-text-soft);
-  --cargo-line: var(--color-border-subtle);
 }
 
 /* Reusable layout primitives. */

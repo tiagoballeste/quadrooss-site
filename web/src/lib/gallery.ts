@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import sharp from "sharp";
+import type { Locale } from "@/lib/i18n";
 
 /*
  * Archive galleries live in web/content/gallery, one Markdown file per
@@ -9,6 +10,8 @@ import sharp from "sharp";
  * the list, the cover and the list of photos; the body is the intro text.
  * Photos are file names from the repo's /media folder (the same pool the
  * Archive dome uses), so a Git-based CMS only has to edit these files.
+ * English: title_en, descriptor_en and intro_en in the same frontmatter;
+ * any of them left out falls back to the Portuguese text.
  */
 
 const CONTENT_DIR = path.join(process.cwd(), "content", "gallery");
@@ -41,6 +44,7 @@ type GalleryFile = {
   descriptor: string;
   order: number;
   intro: string;
+  en: { title: string | null; descriptor: string | null; intro: string | null };
   cover: string;
   photos: string[];
 };
@@ -69,8 +73,12 @@ function readGalleryFile(file: string): GalleryFile {
   const cover = path.basename(typeof data.cover === "string" && data.cover.trim() ? data.cover.trim() : names[0]);
   if (!existsSync(path.join(MEDIA_DIR, cover))) fail(file, `cover "${cover}" is not in /media`);
 
+  const optional = (key: string) =>
+    typeof data[key] === "string" && data[key].trim() !== "" ? (data[key] as string).trim() : null;
+
   return {
     slug: file.replace(/\.md$/, ""),
+    en: { title: optional("title_en"), descriptor: optional("descriptor_en"), intro: optional("intro_en") },
     title: text("title"),
     descriptor: text("descriptor"),
     order: typeof data.order === "number" ? data.order : Number.MAX_SAFE_INTEGER,
@@ -115,15 +123,16 @@ function readAll() {
     .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title, "pt-BR"));
 }
 
-async function toSummary(entry: GalleryFile): Promise<GallerySummary> {
+async function toSummary(entry: GalleryFile, locale: Locale): Promise<GallerySummary> {
+  const en = locale === "en";
   return {
     slug: entry.slug,
-    title: entry.title,
-    descriptor: entry.descriptor,
+    title: (en && entry.en.title) || entry.title,
+    descriptor: (en && entry.en.descriptor) || entry.descriptor,
     order: entry.order,
-    intro: entry.intro,
+    intro: (en && entry.en.intro) || entry.intro,
     count: entry.photos.length,
-    href: `/archive/${entry.slug}`,
+    href: en ? `/en/archive/${entry.slug}` : `/archive/${entry.slug}`,
     cover: await toPhoto(entry.cover),
   };
 }
@@ -132,33 +141,38 @@ export function getGallerySlugs() {
   return readAll().map((entry) => entry.slug);
 }
 
-export async function getGalleries(): Promise<GallerySummary[]> {
-  return Promise.all(readAll().map(toSummary));
+export async function getGalleries(locale: Locale = "pt"): Promise<GallerySummary[]> {
+  return Promise.all(readAll().map((entry) => toSummary(entry, locale)));
 }
 
-export async function getGallery(slug: string): Promise<Gallery | null> {
+export async function getGallery(slug: string, locale: Locale = "pt"): Promise<Gallery | null> {
   const entry = readAll().find((item) => item.slug === slug);
   if (!entry) return null;
-  const [summary, photos] = await Promise.all([toSummary(entry), Promise.all(entry.photos.map(toPhoto))]);
+  const [summary, photos] = await Promise.all([toSummary(entry, locale), Promise.all(entry.photos.map(toPhoto))]);
   return { ...summary, photos };
 }
 
 /** The gallery after this one in list order, wrapping to the first. */
-export async function getNextGallery(slug: string): Promise<GallerySummary | null> {
+export async function getNextGallery(slug: string, locale: Locale = "pt"): Promise<GallerySummary | null> {
   const all = readAll();
   if (all.length < 2) return null;
   const index = all.findIndex((item) => item.slug === slug);
-  return toSummary(all[(index + 1) % all.length]);
+  return toSummary(all[(index + 1) % all.length], locale);
 }
 
-const COUNT_WORDS = ["Nenhuma", "Uma", "Duas", "Três", "Quatro", "Cinco", "Seis", "Sete", "Oito", "Nove", "Dez"];
+const COUNT_WORDS: Record<Locale, string[]> = {
+  pt: ["Nenhuma", "Uma", "Duas", "Três", "Quatro", "Cinco", "Seis", "Sete", "Oito", "Nove", "Dez"],
+  en: ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"],
+};
 
-/** "Cinco galerias" for the list heading; digits past ten. */
-export function galleryCountLabel(count: number) {
-  const word = COUNT_WORDS[count] ?? String(count);
+/** "Cinco galerias" / "Five galleries" for the list heading; digits past ten. */
+export function galleryCountLabel(count: number, locale: Locale = "pt") {
+  const word = COUNT_WORDS[locale][count] ?? String(count);
+  if (locale === "en") return `${word} ${count === 1 ? "gallery" : "galleries"}`;
   return `${word} ${count === 1 ? "galeria" : "galerias"}`;
 }
 
-export function formatPhotoCount(count: number) {
-  return `${String(count).padStart(3, "0")} ${count === 1 ? "foto" : "fotos"}`;
+export function formatPhotoCount(count: number, locale: Locale = "pt") {
+  const noun = locale === "en" ? (count === 1 ? "photo" : "photos") : count === 1 ? "foto" : "fotos";
+  return `${String(count).padStart(3, "0")} ${noun}`;
 }

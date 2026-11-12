@@ -2,14 +2,20 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { marked } from "marked";
+import type { Locale } from "@/lib/i18n";
 
 /*
  * Journal posts live in web/content/journal, one Markdown file per post:
  * frontmatter for the fields below, the article text as the body. The file
  * name is the URL slug. A Git-based CMS can edit these files directly.
+ *
+ * English: web/content/journal/en/<same slug>.md holds the translated title,
+ * excerpt, place, series and credit (frontmatter) and the translated text
+ * (body). Any field left out falls back to the Portuguese file.
  */
 
 const CONTENT_DIR = path.join(process.cwd(), "content", "journal");
+const EN_DIR = path.join(CONTENT_DIR, "en");
 const THUMB_DIR = path.join(process.cwd(), "public", "media", "journal");
 
 export type JournalPostType = "vlog" | "set";
@@ -65,8 +71,11 @@ function toIsoDate(value: unknown, file: string) {
   throw new Error(`Journal: "date" must be YYYY-MM-DD in content/journal/${file}`);
 }
 
-function formatDate(iso: string) {
+const EN_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatDate(iso: string, locale: Locale) {
   const [year, month, day] = iso.split("-");
+  if (locale === "en") return `${EN_MONTHS[Number(month) - 1]} ${Number(day)}, ${year}`;
   return `${day}.${month}.${year}`;
 }
 
@@ -83,9 +92,19 @@ function getThumbnail(videoId: string) {
   return { src: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, srcSet: null };
 }
 
-function readPost(file: string): JournalPost {
+function readTranslation(file: string) {
+  const enFile = path.join(EN_DIR, file);
+  if (!existsSync(enFile)) return null;
+  return matter(readFileSync(enFile, "utf8"));
+}
+
+function readPost(file: string, locale: Locale): JournalPost {
   const slug = file.replace(/\.md$/, "");
-  const { data, content } = matter(readFileSync(path.join(CONTENT_DIR, file), "utf8"));
+  const source = matter(readFileSync(path.join(CONTENT_DIR, file), "utf8"));
+  const translation = locale === "en" ? readTranslation(file) : null;
+  // Translated fields win; whatever the translation leaves out stays Portuguese.
+  const data = { ...source.data, ...(translation?.data ?? {}) };
+  const content = translation && translation.content.trim() ? translation.content : source.content;
 
   const type = data.type;
   if (type !== "vlog" && type !== "set") {
@@ -110,7 +129,7 @@ function readPost(file: string): JournalPost {
     place: optionalString(data, "place"),
     credit: optionalString(data, "credit"),
     date,
-    dateLabel: formatDate(date),
+    dateLabel: formatDate(date, locale),
     duration: requireString(data, "duration", file),
     youtube,
     videoId,
@@ -118,21 +137,21 @@ function readPost(file: string): JournalPost {
     featured: data.featured === true,
     bodyHtml: body ? (marked.parse(body, { async: false }) as string) : "",
     hasPage,
-    href: `/journal/${slug}`,
+    href: locale === "en" ? `/en/journal/${slug}` : `/journal/${slug}`,
     thumbnail: getThumbnail(videoId),
   };
 }
 
 /** Newest first; within a day, the higher episode first. */
-export function getJournalPosts(): JournalPost[] {
+export function getJournalPosts(locale: Locale = "pt"): JournalPost[] {
   return readdirSync(CONTENT_DIR)
     .filter((file) => file.endsWith(".md"))
-    .map(readPost)
+    .map((file) => readPost(file, locale))
     .sort((a, b) => b.date.localeCompare(a.date) || (b.episode ?? 0) - (a.episode ?? 0));
 }
 
-export function getJournalPost(slug: string) {
-  return getJournalPosts().find((post) => post.slug === slug && post.hasPage) ?? null;
+export function getJournalPost(slug: string, locale: Locale = "pt") {
+  return getJournalPosts(locale).find((post) => post.slug === slug && post.hasPage) ?? null;
 }
 
 /** The post marked `featured: true`, or else the newest one with a page. */

@@ -1,6 +1,9 @@
 ---
 title: Trampos
 descriptor: Bastidores
+title_en: Gigs
+descriptor_en: Behind the scenes
+intro_en: "Behind the scenes on set: camera in hand, crew, lights and everything that happens before we hit play."
 order: 1
 cover: K3143875_IMG_3532-Enhanced-NR.jpg
 photos:

@@ -1,6 +1,9 @@
 ---
 title: Retratos
 descriptor: Gente
+title_en: Portraits
+descriptor_en: People
+intro_en: "People, up close."
 order: 4
 cover: O3136678_18122024-_MG_8811-2.jpg
 photos:

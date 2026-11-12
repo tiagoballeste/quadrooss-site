@@ -34,6 +34,9 @@ import {
 import { VimeoProjectPlayer } from "@/components/core/vimeo-project-player";
 import creditsData from "@/data/work/credits.json";
 import projectsData from "@/data/work/projects.json";
+import { useLocale } from "@/components/use-locale";
+import { creditLabel, creditValue } from "@/i18n/credits";
+import { getUi } from "@/i18n/ui";
 
 type Role =
   | "video"
@@ -63,20 +66,13 @@ type WorkCredits = {
   }>;
 };
 
-const FILTERS: Array<{ id: Filter; label: string }> = [
-  { id: "todos", label: "Todos" },
-  { id: "video", label: "Vídeo" },
-  { id: "direcao-criativa", label: "Direção criativa" },
-  { id: "producao-executiva", label: "Produção executiva" },
-  { id: "edicao-real-time", label: "Edição / Real time" },
+const FILTER_IDS: Filter[] = [
+  "todos",
+  "video",
+  "direcao-criativa",
+  "producao-executiva",
+  "edicao-real-time",
 ];
-
-const ROLE_LABELS: Record<Role, string> = {
-  video: "Vídeo",
-  "direcao-criativa": "Direção criativa",
-  "producao-executiva": "Produção executiva",
-  "edicao-real-time": "Edição / Real time",
-};
 
 const FEATURED_TITLES = [
   "Havaianas Nuitsz",
@@ -142,7 +138,9 @@ function TiltProjectCard({
     element.style.setProperty("--work-card-rotate-y", `${x * -8}deg`);
   };
 
-  const roleText = project.roles.map((role) => ROLE_LABELS[role]).join(" · ");
+  const locale = useLocale();
+  const ui = getUi(locale);
+  const roleText = project.roles.map((role) => ui.work.roles[role]).join(" · ");
   const imageSource = LOCAL_COVERS[project.title] ?? project.thumbnail;
   const projectCredits = credits[project.title] ?? {
     unavailable: true,
@@ -155,7 +153,7 @@ function TiltProjectCard({
       transition={{ type: "spring", bounce: 0.05, duration: 0.34 }}
     >
       <MorphingDialogTrigger
-        aria-label={`${project.title} — abrir projeto`}
+        aria-label={ui.work.openProject(project.title)}
         className="work-project-card"
         onBlur={(event) => resetTilt(event.currentTarget)}
         onPointerLeave={(event) => resetTilt(event.currentTarget)}
@@ -224,10 +222,10 @@ function TiltProjectCard({
                 exit: { opacity: 0, y: 18, transition: { duration: 0.18 } },
               }}
             >
-              <p className="work-project-dialog__eyebrow">Ficha técnica</p>
+              <p className="work-project-dialog__eyebrow">{ui.work.credits}</p>
               {projectCredits.unavailable ? (
                 <p className="work-project-dialog__unavailable">
-                  Créditos não informados para este projeto.
+                  {ui.work.noCredits}
                 </p>
               ) : (
                 <dl className="work-project-dialog__credits">
@@ -236,8 +234,8 @@ function TiltProjectCard({
                       className="work-project-dialog__credit"
                       key={`${credit.label}-${credit.value}`}
                     >
-                      <dt>{credit.label}</dt>
-                      <dd>{credit.value}</dd>
+                      <dt>{creditLabel(credit.label, locale)}</dt>
+                      <dd>{creditValue(credit.value, locale)}</dd>
                     </div>
                   ))}
                 </dl>
@@ -259,6 +257,7 @@ export function WorkProjectsGrid() {
   const [gridColumnCount, setGridColumnCount] = useState(3);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
+  const ui = getUi(useLocale());
 
   const filteredProjects = useMemo(() => {
     if (activeFilter === "todos") return getAllProjectsOrder(projects);
@@ -320,26 +319,23 @@ export function WorkProjectsGrid() {
   };
 
   return (
-    <section className="work-catalog" aria-label="Projetos">
+    <section className="work-catalog" aria-label={ui.work.projects}>
       <aside className="work-catalog__sidebar">
         <div className="work-catalog__sidebar-inner">
-          <p className="work-catalog__intro">
-            Um arquivo visual dos projetos que eu conduzo, das cenas e vivências
-            que fazem parte da minha vida.
-          </p>
+          <p className="work-catalog__intro">{ui.work.intro}</p>
 
           <div className="work-catalog__filters">
-            <span>Filtro</span>
-            <div className="work-catalog__filter-list" aria-label="Filtrar projetos">
-              {FILTERS.map((filter) => (
+            <span>{ui.work.filter}</span>
+            <div className="work-catalog__filter-list" aria-label={ui.work.filterProjects}>
+              {FILTER_IDS.map((filter) => (
                 <button
-                  aria-pressed={activeFilter === filter.id}
-                  className={activeFilter === filter.id ? "is-active" : undefined}
-                  key={filter.id}
-                  onClick={() => selectFilter(filter.id)}
+                  aria-pressed={activeFilter === filter}
+                  className={activeFilter === filter ? "is-active" : undefined}
+                  key={filter}
+                  onClick={() => selectFilter(filter)}
                   type="button"
                 >
-                  {filter.label}
+                  {ui.work.roles[filter]}
                 </button>
               ))}
             </div>
@@ -353,7 +349,7 @@ export function WorkProjectsGrid() {
         className="work-catalog__results"
       >
         <p className="sr-only">
-          {filteredProjects.length} projetos no filtro {FILTERS.find((item) => item.id === activeFilter)?.label}.
+          {ui.work.resultCount(filteredProjects.length, ui.work.roles[activeFilter])}
         </p>
         <LayoutGroup id="work-project-filter">
           <motion.div className="work-catalog__grid" layout={!reducedMotion}>

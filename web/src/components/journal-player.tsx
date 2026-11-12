@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useUi } from "@/components/use-locale";
 
 type JournalPlayerProps = {
   videoId: string;
@@ -17,6 +18,7 @@ type JournalPlayerProps = {
  */
 export function JournalPlayer({ videoId, title, duration, poster, caption, youtube }: JournalPlayerProps) {
   const [playing, setPlaying] = useState(false);
+  const ui = useUi();
 
   return (
     <figure className="journal-player">
@@ -36,8 +38,8 @@ export function JournalPlayer({ videoId, title, duration, poster, caption, youtu
                 <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />
               </svg>
             </span>
-            <span className="journal-player__label">Assistir · {duration}</span>
-            <span className="sr-only">Assistir {title}</span>
+            <span className="journal-player__label">{ui.journal.watch} · {duration}</span>
+            <span className="sr-only">{ui.journal.watch} {title}</span>
           </button>
         )}
       </div>

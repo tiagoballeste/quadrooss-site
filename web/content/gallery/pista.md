@@ -1,6 +1,9 @@
 ---
 title: Pista
 descriptor: Noite e música
+title_en: Dancefloor
+descriptor_en: Night & music
+intro_en: "Booth, stage and dancefloor: the nights of sound."
 order: 3
 cover: A3143875_DSC01917.jpg
 photos:

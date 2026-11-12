@@ -1,6 +1,9 @@
 ---
 title: Viagens
 descriptor: Estrada
+title_en: Travels
+descriptor_en: On the road
+intro_en: "Cities, beaches and roads that passed through the lens."
 order: 2
 cover: R3143875_IMG_2729.webp
 photos:

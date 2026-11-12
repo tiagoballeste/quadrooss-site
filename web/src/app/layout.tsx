@@ -3,6 +3,7 @@ import Script from "next/script";
 import { PageLoader } from "@/components/page-loader";
 import { PageTransitionProvider } from "@/components/page-transition";
 import { HERO_VIDEO_POSTER, PersistentHeroVideo } from "@/components/persistent-hero-video";
+import { HtmlLang } from "@/components/html-lang";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import "lenis/dist/lenis.css";
 import "./design-system.css";
@@ -12,7 +13,7 @@ import { siteConfig } from "@/lib/site-config";
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: siteConfig.name,
+    default: siteConfig.title,
     template: `%s — ${siteConfig.name}`,
   },
   description: siteConfig.description,
@@ -45,6 +46,7 @@ export default function RootLayout({
         </Script>
       </head>
       <body>
+        <HtmlLang />
         <SmoothScroll />
         <PersistentHeroVideo />
         <PageLoader enabled={loaderEnabled} />

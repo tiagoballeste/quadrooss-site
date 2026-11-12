@@ -1,5 +1,6 @@
 "use client";
 
+import { useUi } from "@/components/use-locale";
 import {
   AnimatePresence,
   motion,
@@ -326,11 +327,12 @@ export function MorphingDialogClose({
   ...props
 }: HTMLMotionProps<"button">) {
   const { setOpen } = useMorphingDialog();
+  const ui = useUi();
 
   return (
     <motion.button
       {...props}
-      aria-label="Fechar projeto"
+      aria-label={ui.work.closeProject}
       data-morphing-dialog-close
       onClick={(event) => {
         onClick?.(event);

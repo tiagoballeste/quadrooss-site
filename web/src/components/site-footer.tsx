@@ -1,6 +1,9 @@
+"use client";
+
 import { TransitionLink } from "@/components/page-transition";
 import { BrandLogo } from "@/components/brand-logo";
 import { siteConfig } from "@/lib/site-config";
+import { useUi } from "@/components/use-locale";
 
 const footerNavigation = [
   { label: "Home", href: "/" },
@@ -12,10 +15,12 @@ const footerNavigation = [
 ] as const;
 
 export function SiteFooter() {
+  const ui = useUi();
+
   return (
     <footer className="site-footer">
       <div className="site-footer__grid">
-        <nav className="site-footer__column" aria-label="Navegação do rodapé">
+        <nav className="site-footer__column" aria-label={ui.nav.footer}>
           <span className="site-footer__label">Navigation</span>
           {footerNavigation.map(({ label, href }) => (
             <TransitionLink href={href} key={href}>{label}</TransitionLink>

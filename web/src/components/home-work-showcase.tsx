@@ -3,46 +3,47 @@
 import { TransitionLink } from "@/components/page-transition";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
+import { useUi } from "@/components/use-locale";
 
 const projects = [
   {
     title: "Havaianas — Nuitsz",
-    role: "Filmmaking",
+    role: "filmmaking",
     align: "left",
     size: "wide",
     cover: "/images/work/havaianas-nuitsz.png",
   },
   {
     title: "Nowdays 4/20",
-    role: "Filmmaking",
+    role: "filmmaking",
     align: "right",
     size: "wide",
     cover: "/images/work/nowdays-420.png",
   },
   {
     title: "Kyan Cena 2K25",
-    role: "Filmmaking",
+    role: "filmmaking",
     align: "left",
     size: "compact",
     cover: "/images/work/kyan-cena-2k25.png",
   },
   {
     title: "Alok — Rave The World",
-    role: "Filmmaking",
+    role: "filmmaking",
     align: "right",
     size: "compact",
     cover: "/images/work/alok-rave-the-world.png",
   },
   {
     title: "Umbro — Urban Glow",
-    role: "Direção Criativa & Produção Executiva",
+    role: "creativeAndExecutive",
     align: "left",
     size: "wide",
     cover: "/images/work/umbro-urban-glow.png",
   },
   {
     title: "Champion — What Moves You?",
-    role: "Direção Criativa & Produção Executiva",
+    role: "creativeAndExecutive",
     align: "right",
     size: "wide",
     cover: "/images/work/champion-what-moves-you.png",
@@ -50,6 +51,7 @@ const projects = [
 ] as const;
 
 export function HomeWorkShowcase() {
+  const ui = useUi();
   const sectionRef = useRef<HTMLElement>(null);
   const pinLayerRef = useRef<HTMLDivElement>(null);
   const riseLayerRef = useRef<HTMLDivElement>(null);
@@ -111,7 +113,7 @@ export function HomeWorkShowcase() {
         >
           <div className="home-work__sticky">
             <span className="home-work__eyebrow">( WORK )</span>
-            <h2 id="home-work-title">TÁ TUDO<br />AQUI</h2>
+            <h2 id="home-work-title">{ui.home.workTitle[0]}<br />{ui.home.workTitle[1]}</h2>
           </div>
 
           <ol className="home-work__projects">
@@ -123,7 +125,7 @@ export function HomeWorkShowcase() {
                 <TransitionLink
                   className="home-work__project-link"
                   href="/work"
-                  aria-label={`Ver ${project.title}`}
+                  aria-label={ui.home.seeProject(project.title)}
                 >
                   <span className="home-work__cover">
                     <Image
@@ -136,7 +138,7 @@ export function HomeWorkShowcase() {
                   </span>
                   <span className="home-work__meta">
                     <strong>{project.title}</strong>
-                    <small>{project.role}</small>
+                    <small>{ui.home[project.role]}</small>
                   </span>
                 </TransitionLink>
               </li>
@@ -145,7 +147,7 @@ export function HomeWorkShowcase() {
 
           <div className="home-work__more">
             <TransitionLink href="/work" transitionLabel="WORK">
-              <span>Ver mais</span>
+              <span>{ui.home.seeMore}</span>
               <span aria-hidden="true">→</span>
             </TransitionLink>
           </div>
