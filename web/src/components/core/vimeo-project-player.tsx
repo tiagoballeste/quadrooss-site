@@ -40,8 +40,16 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
         </>
       ) : (
         <>
-          <path d="M16 9a4 4 0 0 1 0 6" stroke="currentColor" strokeLinecap="round" />
-          <path d="M18.5 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" strokeLinecap="round" />
+          <path
+            d="M16 9a4 4 0 0 1 0 6"
+            stroke="currentColor"
+            strokeLinecap="round"
+          />
+          <path
+            d="M18.5 6.5a7.5 7.5 0 0 1 0 11"
+            stroke="currentColor"
+            strokeLinecap="round"
+          />
         </>
       )}
     </svg>
@@ -92,6 +100,7 @@ export function VimeoProjectPlayer({
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [canSetVolume, setCanSetVolume] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [activeQuality, setActiveQuality] = useState("auto");
   const [qualities, setQualities] = useState<VimeoQuality[]>([
@@ -105,7 +114,16 @@ export function VimeoProjectPlayer({
   );
   const activeQualityLabel =
     qualities.find((quality) => quality.id === activeQuality)?.label ??
-    (activeQuality === "auto" ? "Auto" : activeQuality?.toUpperCase() || "Auto");
+    (activeQuality === "auto"
+      ? "Auto"
+      : activeQuality?.toUpperCase() || "Auto");
+
+  useEffect(() => {
+    // iOS keeps media volume under the hardware buttons: a page can only mute.
+    const probe = document.createElement("audio");
+    probe.volume = 0.5;
+    if (probe.volume !== 0.5) setCanSetVolume(false);
+  }, []);
 
   useEffect(() => {
     if (!openMenu) return;
@@ -325,7 +343,10 @@ export function VimeoProjectPlayer({
         transition={{ delay: 0.18, duration: 0.38, ease: "easeOut" }}
       />
 
-      <div className="work-project-player-controls" aria-label={ui.player.controls}>
+      <div
+        className="work-project-player-controls"
+        aria-label={ui.player.controls}
+      >
         <button
           aria-label={isPlaying ? ui.player.pause : ui.player.play}
           onClick={togglePlayback}
@@ -359,19 +380,21 @@ export function VimeoProjectPlayer({
           >
             <SpeakerIcon muted={isMuted || volume === 0} />
           </button>
-          <input
-            aria-label={ui.player.volume}
-            aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}%`}
-            className="work-project-player-volume__slider"
-            max="1"
-            min="0"
-            onChange={(event) =>
-              changeVolume(Number(event.currentTarget.value))
-            }
-            step="0.01"
-            type="range"
-            value={isMuted ? 0 : volume}
-          />
+          {canSetVolume ? (
+            <input
+              aria-label={ui.player.volume}
+              aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}%`}
+              className="work-project-player-volume__slider"
+              max="1"
+              min="0"
+              onChange={(event) =>
+                changeVolume(Number(event.currentTarget.value))
+              }
+              step="0.01"
+              type="range"
+              value={isMuted ? 0 : volume}
+            />
+          ) : null}
         </div>
 
         <div
@@ -424,7 +447,10 @@ export function VimeoProjectPlayer({
                       role="menuitemradio"
                       type="button"
                     >
-                      <span aria-hidden="true" className="work-project-player-setting__check">
+                      <span
+                        aria-hidden="true"
+                        className="work-project-player-setting__check"
+                      >
                         {quality.id === activeQuality ? "✓" : ""}
                       </span>
                       {quality.label}
@@ -442,9 +468,7 @@ export function VimeoProjectPlayer({
               aria-label={ui.player.speed(formatPlaybackRate(playbackRate))}
               className="work-project-player-setting__trigger"
               onClick={() =>
-                setOpenMenu((current) =>
-                  current === "speed" ? null : "speed",
-                )
+                setOpenMenu((current) => (current === "speed" ? null : "speed"))
               }
               type="button"
             >
@@ -467,13 +491,18 @@ export function VimeoProjectPlayer({
                   {PLAYBACK_RATES.map((rate) => (
                     <button
                       aria-checked={rate === playbackRate}
-                      className={rate === playbackRate ? "is-active" : undefined}
+                      className={
+                        rate === playbackRate ? "is-active" : undefined
+                      }
                       key={rate}
                       onClick={() => selectPlaybackRate(rate)}
                       role="menuitemradio"
                       type="button"
                     >
-                      <span aria-hidden="true" className="work-project-player-setting__check">
+                      <span
+                        aria-hidden="true"
+                        className="work-project-player-setting__check"
+                      >
                         {rate === playbackRate ? "✓" : ""}
                       </span>
                       {formatPlaybackRate(rate)}
