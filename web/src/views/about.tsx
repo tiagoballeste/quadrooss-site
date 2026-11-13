@@ -1,16 +1,29 @@
-import { BrandLogo } from "@/components/brand-logo";
+import { JournalCta } from "@/components/journal-cta";
+import { TransitionLink } from "@/components/page-transition";
 import { SiteNav } from "@/components/site-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { getUi } from "@/i18n/ui";
 import type { Locale } from "@/lib/i18n";
+import { getJournalPosts } from "@/lib/journal";
 import { pageMetadata } from "@/lib/page-metadata";
+import { socialLinks } from "@/lib/site-config";
 
 export const aboutMetadata = (locale: Locale) => pageMetadata({ locale, path: "/about", title: "About" });
 
 const COPY = {
   pt: {
-    lead: ["Sou o Pedro Quadros, diretor e filmmaker baseado em São Paulo.", "Meu trabalho transita entre música, moda, pessoas e os lugares por onde acabo passando."],
+    lead: "Sou o Pedro Quadros, diretor e filmmaker baseado em São Paulo. Meu trabalho transita entre música, moda, pessoas e os lugares por onde acabo passando.",
     statement: "“Me interesso por momentos reais, pelas pessoas por trás deles e por tudo aquilo que acontece no meio do caminho.”",
+    services: [
+      { name: "DIREÇÃO CRIATIVA", desc: "Conceito, roteiro e linguagem visual, do primeiro briefing à aprovação final." },
+      { name: "CAMPANHAS DE MARCA", desc: "Ideia, produção e entrega da campanha completa, como a da Umbro, montada do zero em 30 dias." },
+      { name: "DIREÇÃO DE IMAGEM", desc: "A identidade em vídeo de DJs e artistas, acompanhando a carreira e não só um lançamento." },
+      { name: "FILMAGEM", desc: "Clipes, campanhas, eventos e conteúdo, com a equipe certa montada para cada projeto." },
+      { name: "FESTIVAIS E TOURS", desc: "Cobertura de shows, festivais e turnês, com after movie e postcards em toda entrega." },
+      { name: "PRODUÇÃO EXECUTIVA", desc: "Orçamento, equipe, cronograma e logística, do planejamento ao último dia de set." },
+      { name: "EDIÇÃO E REAL TIME", desc: "Montagem e finalização, inclusive durante o evento, para o conteúdo sair enquanto a festa acontece." },
+      { name: "FOTOGRAFIA", desc: "Bastidores, eventos e retratos." },
+    ],
     history: [
   "Comecei minha trajetória profissional em 2022, junto com a faculdade de Publicidade e Comunicação.",
   "Ainda no início do curso, enquanto procurava minhas primeiras oportunidades no mercado, decidi criar um projeto próprio para falar sobre coisas que já faziam parte do meu universo: streetwear, moda, música e cultura.",
@@ -25,8 +38,18 @@ const COPY = {
 ],
   },
   en: {
-    lead: ["I’m Pedro Quadros, a director and filmmaker based in São Paulo.", "My work moves between music, fashion, people and the places I end up passing through."],
+    lead: "I’m Pedro Quadros, a director and filmmaker based in São Paulo. My work moves between music, fashion, people and the places I end up passing through.",
     statement: "“I’m interested in real moments, in the people behind them and in everything that happens along the way.”",
+    services: [
+      { name: "CREATIVE DIRECTION", desc: "Concept, script and visual language, from the first brief to final sign-off." },
+      { name: "BRAND CAMPAIGNS", desc: "Idea, production and delivery of the full campaign, like Umbro’s, built from scratch in 30 days." },
+      { name: "IMAGE DIRECTION", desc: "The video identity of DJs and artists, following the career and not just one release." },
+      { name: "FILMING", desc: "Music videos, campaigns, events and content, with the right crew put together for each project." },
+      { name: "FESTIVALS AND TOURS", desc: "Coverage of shows, festivals and tours, with an aftermovie and postcards in every delivery." },
+      { name: "EXECUTIVE PRODUCTION", desc: "Budget, crew, schedule and logistics, from planning to the last day on set." },
+      { name: "EDITING AND REAL TIME", desc: "Editing and finishing, even during the event, so the content goes out while the party is still on." },
+      { name: "PHOTOGRAPHY", desc: "Behind the scenes, events and portraits." },
+    ],
     history: [
       "I started my professional path in 2022, alongside my degree in Advertising and Communication.",
       "Still early in the course, while looking for my first opportunities in the market, I decided to create a project of my own to talk about things that were already part of my world: streetwear, fashion, music and culture.",
@@ -45,29 +68,91 @@ const COPY = {
 export function AboutView({ locale }: { locale: Locale }) {
   const ui = getUi(locale);
   const copy = COPY[locale];
+  const sets = getJournalPosts(locale)
+    .filter((post) => post.type === "set")
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const [featured] = sets;
+  const soundcloud = socialLinks.find((social) => social.label === "SoundCloud");
 
   return (
     <main className="site-page about-page">
       <SiteNav />
-      <section className="ab-hero">
-        <BrandLogo className="ab-hero-logo" priority />
-        <div className="ab-hero-grad" />
-        <div className="ab-hero-text">
-          <span className="ab-role">{ui.about.role}</span>
-          <p className="ab-lead">
-            {copy.lead[0]}<br />
-            {copy.lead[1]}
-          </p>
-          <span className="ab-scroll">{ui.about.scroll}</span>
+      <div className="ab-layout">
+        <div className="ab-portrait">
+          <img
+            alt={ui.about.portraitAlt}
+            decoding="async"
+            fetchPriority="high"
+            sizes="(max-width: 900px) 100vw, 50vw"
+            src="/images/about/pedro.webp"
+            srcSet="/images/about/pedro-640.webp 640w, /images/about/pedro.webp 1000w"
+          />
         </div>
-      </section>
-      <section className="ab-statement">
-        <h2>{copy.statement}</h2>
-      </section>
-      <section className="ab-history">
-        <span className="caption">{ui.about.soFar}</span>
-        {copy.history.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-      </section>
+
+        <div className="ab-content">
+          <section aria-labelledby="ab-about" className="ab-section ab-intro">
+            <div className="ab-kicker">
+              <h1 id="ab-about">{ui.about.about}</h1>
+              <span>{ui.about.role}</span>
+            </div>
+            <p className="ab-lead">{copy.lead}</p>
+            <blockquote className="ab-quote">{copy.statement}</blockquote>
+            <div className="ab-history">
+              <span className="ab-label">{ui.about.soFar}</span>
+              {copy.history.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+            </div>
+          </section>
+
+          <section aria-labelledby="ab-services" className="ab-section">
+            <h2 className="ab-label" id="ab-services">{ui.about.services}</h2>
+            <ul className="ab-services">
+              {copy.services.map((service) => (
+                <li className="ab-service" key={service.name}>
+                  <span className="ab-service__name">{service.name}</span>
+                  <span className="ab-service__desc">{service.desc}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {featured ? (
+            <section aria-labelledby="ab-floor" className="ab-section">
+              <h2 className="ab-label" id="ab-floor">{ui.about.onTheFloor}</h2>
+              <div className="ab-sets">
+                <TransitionLink aria-label={`${ui.about.watchSet}: ${featured.title}`} className="ab-set-feature" href={featured.href}>
+                  <img alt="" className="ab-set-feature__cover" decoding="async" loading="lazy" src={featured.thumbnail.src} />
+                  <span className="ab-set-feature__text">
+                    <span className="ab-set-feature__kicker">DJ SET{featured.credit ? ` · ${featured.credit}` : ""}</span>
+                    <span className="ab-set-feature__title">{featured.title}</span>
+                    <span className="ab-set-feature__meta">{featured.duration}</span>
+                  </span>
+                  <span aria-hidden="true" className="ab-set-feature__play">
+                    <svg height="20" viewBox="0 0 24 24" width="20"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" /></svg>
+                  </span>
+                </TransitionLink>
+                <ol className="ab-set-list">
+                  {sets.map((set, index) => (
+                    <li key={set.slug}>
+                      <TransitionLink className="ab-set-row" href={set.href}>
+                        <span className="ab-set-row__n">{index + 1}</span>
+                        <span className="ab-set-row__title">
+                          <span>{set.title}</span>
+                          {set.credit ? <span className="ab-set-row__credit">{set.credit}</span> : null}
+                        </span>
+                        <span className="ab-set-row__len">{set.duration}</span>
+                      </TransitionLink>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              {soundcloud ? (
+                <a className="ab-soundcloud" href={soundcloud.href} rel="noreferrer" target="_blank">{ui.about.soundcloud}</a>
+              ) : null}
+            </section>
+          ) : null}
+        </div>
+      </div>
+      <JournalCta />
       <SiteFooter />
     </main>
   );

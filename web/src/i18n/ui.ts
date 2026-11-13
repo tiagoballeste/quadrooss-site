@@ -109,8 +109,13 @@ const pt = {
   },
   about: {
     role: "DIRETOR / FILMMAKER / DJ / PRODUTOR EXECUTIVO",
-    scroll: "ROLAR PARA EXPLORAR ↓",
+    about: "SOBRE",
     soFar: "ATÉ AQUI",
+    services: "SERVIÇOS",
+    onTheFloor: "NA PISTA",
+    portraitAlt: "Retrato em preto e branco de Pedro Quadros, de gorro",
+    watchSet: "Assistir o set",
+    soundcloud: "Ouvir no SoundCloud ↗",
   },
   footer: {
     navigation: "Navigation",
@@ -225,8 +230,13 @@ const en: UiCopy = {
   },
   about: {
     role: "DIRECTOR / FILMMAKER / DJ / EXECUTIVE PRODUCER",
-    scroll: "SCROLL TO EXPLORE ↓",
+    about: "ABOUT",
     soFar: "SO FAR",
+    services: "SERVICES",
+    onTheFloor: "ON THE FLOOR",
+    portraitAlt: "Black and white portrait of Pedro Quadros wearing a beanie",
+    watchSet: "Watch the set",
+    soundcloud: "Listen on SoundCloud ↗",
   },
   footer: {
     navigation: "Navigation",
